@@ -12,6 +12,7 @@ import {
   Armchair,
 } from 'lucide-react';
 
+// Updated: Ensure Vercel rebuilds with full styling and images
 export default function Home() {
   const propertyImages = [
     'https://images.unsplash.com/photo-1511316695145-4992006ffddb?w=1200&q=80',
