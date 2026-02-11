@@ -47,7 +47,8 @@
 
 /* Typography Base */
 body {
-  @apply font-sans antialiased;
+  font-family: var(--font-sans);
+  @apply antialiased;
   background-color: #ffffff;
   color: #1f2937;
 }
@@ -80,5 +81,5 @@ body {
 
 /* Smooth Images */
 img {
-  @apply rounded-lg;
+  border-radius: 0.5rem;
 }
