@@ -5,36 +5,41 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-mountain-dark text-white">
+    <footer className="bg-primary-dark text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           {/* Brand */}
           <div>
-            <h3 className="font-serif text-lg font-semibold mb-4">
-              Purgatory Townhouse
+            <h3 className="font-display text-lg font-semibold mb-4">
+              Purgatory
             </h3>
-            <p className="text-gray-300 text-sm">
-              Your perfect mountain getaway in the heart of Durango, Colorado.
+            <p className="text-accent-sky text-sm">
+              Discover the alpine beauty of Colorado's San Juan Mountains.
             </p>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h4 className="font-semibold mb-4">Quick Links</h4>
-            <ul className="space-y-2 text-sm text-gray-300">
+            <h4 className="font-semibold font-display mb-4">Quick Links</h4>
+            <ul className="space-y-2 text-sm text-accent-sky">
               <li>
-                <Link href="/property" className="hover:text-gold transition-colors">
-                  Property Details
+                <Link href="/" className="hover:text-white transition-colors">
+                  Home
                 </Link>
               </li>
               <li>
-                <Link href="/booking" className="hover:text-gold transition-colors">
-                  Book Now
+                <Link href="/purgatory-resort" className="hover:text-white transition-colors">
+                  Resort
                 </Link>
               </li>
               <li>
-                <Link href="/about" className="hover:text-gold transition-colors">
-                  About Us
+                <Link href="/needles-mountains" className="hover:text-white transition-colors">
+                  Needles Mountains
+                </Link>
+              </li>
+              <li>
+                <Link href="/experience" className="hover:text-white transition-colors">
+                  Experience
                 </Link>
               </li>
             </ul>
@@ -42,46 +47,28 @@ export default function Footer() {
 
           {/* Contact Info */}
           <div>
-            <h4 className="font-semibold mb-4">Contact</h4>
-            <ul className="space-y-3 text-sm text-gray-300">
+            <h4 className="font-semibold font-display mb-4">Location</h4>
+            <ul className="space-y-3 text-sm text-accent-sky">
               <li className="flex items-center gap-2">
-                <Phone size={16} className="text-gold" />
-                <a href="tel:+1234567890" className="hover:text-gold transition-colors">
-                  (123) 456-7890
-                </a>
+                <MapPin size={16} className="text-accent-water" />
+                <span>Purgatory, CO</span>
               </li>
               <li className="flex items-center gap-2">
-                <Mail size={16} className="text-gold" />
-                <a href="mailto:info@purgatorytownhouse.com" className="hover:text-gold transition-colors">
-                  info@purgatory.local
-                </a>
+                <MapPin size={16} className="text-accent-water" />
+                <span>Durango, Colorado, USA</span>
               </li>
-              <li className="flex items-center gap-2">
-                <MapPin size={16} className="text-gold" />
-                <span>Durango, CO 81301</span>
-              </li>
-            </ul>
-          </div>
-
-          {/* Hours */}
-          <div>
-            <h4 className="font-semibold mb-4">Hours</h4>
-            <ul className="space-y-2 text-sm text-gray-300">
-              <li>Check-in: 4:00 PM</li>
-              <li>Check-out: 10:00 AM</li>
-              <li>Support: 24/7</li>
             </ul>
           </div>
         </div>
 
         {/* Divider */}
-        <div className="border-t border-mountain-medium pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center text-sm text-gray-400">
-            <p>&copy; {currentYear} Purgatory Townhouse. All rights reserved.</p>
+        <div className="border-t border-accent-slate pt-8">
+          <div className="flex flex-col md:flex-row justify-between items-center text-sm text-accent-sky">
+            <p>&copy; {currentYear} Purgatory Area. All rights reserved.</p>
             <div className="flex gap-6 mt-4 md:mt-0">
-              <a href="#" className="hover:text-gold transition-colors">Privacy</a>
-              <a href="#" className="hover:text-gold transition-colors">Terms</a>
-              <a href="#" className="hover:text-gold transition-colors">Contact</a>
+              <a href="#" className="hover:text-white transition-colors">Privacy</a>
+              <a href="#" className="hover:text-white transition-colors">Terms</a>
+              <a href="#" className="hover:text-white transition-colors">Contact</a>
             </div>
           </div>
         </div>

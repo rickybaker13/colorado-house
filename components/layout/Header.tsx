@@ -11,21 +11,23 @@ export default function Header() {
 
   const navLinks = [
     { href: '/', label: 'Home' },
-    { href: '/property', label: 'Property' },
-    { href: '/booking', label: 'Book Now' },
-    { href: '/about', label: 'About' },
+    { href: '/purgatory-resort', label: 'Resort' },
+    { href: '/needles-mountains', label: 'Needles' },
+    { href: '/lakes-water', label: 'Lakes' },
+    { href: '/experience', label: 'Experience' },
+    { href: '/practical-info', label: 'Info' },
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
+    <header className="sticky top-0 z-50 bg-white bg-opacity-95 backdrop-blur-md border-b border-neutral-medium">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-gradient-to-br from-mountain-medium to-mountain-dark rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-lg">P</span>
+          <div className="w-10 h-10 bg-gradient-to-br from-primary-medium to-primary-dark rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold text-lg font-display">P</span>
           </div>
-          <span className="hidden sm:inline font-serif text-xl font-semibold text-mountain-dark">
-            Purgatory Townhouse
+          <span className="hidden sm:inline font-display text-xl font-semibold text-primary-dark">
+            Purgatory
           </span>
         </Link>
 
@@ -35,20 +37,12 @@ export default function Header() {
             <Link
               key={link.href}
               href={link.href}
-              className="text-gray-700 hover:text-mountain-medium font-medium transition-colors"
+              className="text-primary-dark hover:text-primary-light font-medium transition-colors font-sans"
             >
               {link.label}
             </Link>
           ))}
         </div>
-
-        {/* CTA Button (Desktop) */}
-        <Link
-          href="/booking"
-          className="hidden md:inline-block px-6 py-2 bg-mountain-medium text-white rounded-lg hover:bg-mountain-dark transition-colors font-semibold"
-        >
-          Reserve Now
-        </Link>
 
         {/* Mobile Menu Button */}
         <button
@@ -61,25 +55,18 @@ export default function Header() {
 
       {/* Mobile Navigation */}
       {isOpen && (
-        <div className="md:hidden border-t border-gray-200">
+        <div className="md:hidden border-t border-neutral-medium bg-white">
           <div className="px-4 py-4 space-y-4">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="block text-gray-700 hover:text-mountain-medium font-medium"
+                className="block text-primary-dark hover:text-primary-light font-medium font-sans"
                 onClick={() => setIsOpen(false)}
               >
                 {link.label}
               </Link>
             ))}
-            <Link
-              href="/booking"
-              className="block w-full text-center px-6 py-2 bg-mountain-medium text-white rounded-lg hover:bg-mountain-dark transition-colors font-semibold"
-              onClick={() => setIsOpen(false)}
-            >
-              Reserve Now
-            </Link>
           </div>
         </div>
       )}

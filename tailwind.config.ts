@@ -8,19 +8,25 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        mountain: {
-          dark: '#1a3a3a',
-          medium: '#2d5a5a',
-          light: '#4a8a8a',
+        primary: {
+          dark: '#003D6C',
+          medium: '#0074A2',
+          light: '#009BD6',
         },
-        snow: '#f5f5f5',
-        slate: '#6b7280',
-        gold: '#d4af37',
-        sage: '#9ca98b',
-        rust: '#b85c41',
+        accent: {
+          slate: '#2E4C6D',
+          sky: '#9ED2ED',
+          water: '#B2EBF2',
+        },
+        neutral: {
+          light: '#F5F5F5',
+          medium: '#E5E5E5',
+          dark: '#D9D9D9',
+        },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['Montserrat', 'sans-serif'],
+        sans: ['Roboto', 'system-ui', 'sans-serif'],
         serif: ['Georgia', 'serif'],
       },
       spacing: {
