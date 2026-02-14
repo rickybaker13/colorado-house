@@ -89,6 +89,38 @@ export default function LakesWater() {
               </div>
             </div>
           </motion.div>
+
+          {/* Photo Gallery */}
+          <motion.div
+            className="mt-12"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+          >
+            <h3 className="text-2xl font-bold font-display text-primary-dark mb-6">Gallery</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { src: '/images/bullion-king-lake-2.jpg', alt: 'Dramatic rocky peaks above Bullion King Lake' },
+                { src: '/images/bullion-king-lake-3.jpg', alt: 'Alpine lake surrounded by mountains' },
+                { src: '/images/bullion-king-lake-4.jpg', alt: 'Emerald waters and snow patches' },
+                { src: '/images/bullion-king-lake-5.jpg', alt: 'Wildflowers with lake and cliffs' },
+              ].map((photo, idx) => (
+                <motion.div
+                  key={idx}
+                  className="relative h-64 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow"
+                  whileHover={{ scale: 1.02 }}
+                >
+                  <Image
+                    src={photo.src}
+                    alt={photo.alt}
+                    fill
+                    className="object-cover hover:scale-105 transition-transform duration-300"
+                  />
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
         </div>
       </section>
 
