@@ -46,7 +46,7 @@ export default function ImageCarousel({
             src={image}
             alt={`${alt} - ${index + 1}`}
             fill
-            className="object-cover"
+            className="object-contain"
             priority={index === 0}
           />
         </div>
