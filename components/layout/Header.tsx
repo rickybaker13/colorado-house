@@ -11,12 +11,12 @@ export default function Header() {
 
   const navLinks = [
     { href: '/', label: 'Home' },
-    { href: '/purgatory-resort', label: 'Resort' },
-    { href: '/needles-mountains', label: 'Needles' },
-    { href: '/lakes-water', label: 'Lakes' },
+    { href: '/property', label: 'Property' },
     { href: '/gallery', label: 'Gallery' },
-    { href: '/experience', label: 'Experience' },
-    { href: '/practical-info', label: 'Info' },
+    { href: '/san-juan-mountains', label: 'San Juans' },
+    { href: '/hiking', label: 'Hiking' },
+    { href: '/alpine-lakes', label: 'Lakes' },
+    { href: '/durango', label: 'Durango' },
   ];
 
   return (
