@@ -33,7 +33,7 @@ export default function ImageCarousel({
   const prev = () => setCurrent((prev) => (prev - 1 + images.length) % images.length);
 
   return (
-    <div className="relative w-full h-96 md:h-[500px] lg:h-[600px] overflow-hidden rounded-lg bg-gray-200">
+    <div className="relative w-full h-64 md:h-80 lg:h-96 overflow-hidden rounded-lg bg-gray-200">
       {/* Images */}
       {images.map((image, index) => (
         <div
