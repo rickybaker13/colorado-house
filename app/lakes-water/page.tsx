@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function LakesWater() {
   return (
@@ -48,6 +49,81 @@ export default function LakesWater() {
         </div>
       </section>
 
+      {/* Featured Lake - Bullion King */}
+      <section className="py-16 px-4 bg-white">
+        <div className="max-w-6xl mx-auto">
+          <motion.div
+            className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+          >
+            <div className="relative h-96 rounded-lg overflow-hidden shadow-lg">
+              <Image
+                src="/images/bullion-king-lake.jpg"
+                alt="Bullion King Lake"
+                fill
+                className="object-cover"
+              />
+            </div>
+            <div>
+              <h2 className="text-4xl font-bold font-display text-primary-dark mb-4">
+                Bullion King Lake
+              </h2>
+              <p className="text-accent-water font-semibold mb-4">
+                11,710 ft • 20 miles southwest • Moderate difficulty
+              </p>
+              <p className="text-primary-dark mb-4 leading-relaxed">
+                Experience the serenity of Bullion King Lake, a 10-acre alpine gem nestled in the San Juan Mountains. Surrounded by 13,000-foot peaks, this moderately difficult 6.4-mile round trip hike offers breathtaking views and excellent golden trout fishing.
+              </p>
+              <p className="text-primary-dark mb-6 leading-relaxed">
+                The pristine waters reflect the dramatic mountain landscape, making it an ideal destination for hikers, photographers, and anglers. Best visited from summer through early fall when trails are snow-free and weather is stable.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {['Hiking', 'Fishing', 'Photography'].map((activity) => (
+                  <span key={activity} className="bg-accent-sky bg-opacity-20 text-primary-dark text-sm px-4 py-2 rounded-full font-semibold">
+                    {activity}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Photo Gallery */}
+          <motion.div
+            className="mt-12"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+          >
+            <h3 className="text-2xl font-bold font-display text-primary-dark mb-6">Gallery</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { src: '/images/bullion-king-lake-2.jpg', alt: 'Dramatic rocky peaks above Bullion King Lake' },
+                { src: '/images/bullion-king-lake-3.jpg', alt: 'Alpine lake surrounded by mountains' },
+                { src: '/images/bullion-king-lake-4.jpg', alt: 'Emerald waters and snow patches' },
+                { src: '/images/bullion-king-lake-5.jpg', alt: 'Wildflowers with lake and cliffs' },
+              ].map((photo, idx) => (
+                <motion.div
+                  key={idx}
+                  className="relative h-64 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow"
+                  whileHover={{ scale: 1.02 }}
+                >
+                  <Image
+                    src={photo.src}
+                    alt={photo.alt}
+                    fill
+                    className="object-cover hover:scale-105 transition-transform duration-300"
+                  />
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* Lakes Section */}
       <section className="py-16 px-4 bg-neutral-light">
         <div className="max-w-4xl mx-auto">
@@ -58,18 +134,10 @@ export default function LakesWater() {
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
           >
-            Notable Alpine Lakes
+            More Alpine Lakes
           </motion.h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {[
-              {
-                name: 'Bullion King Lake',
-                elev: '11,710 ft',
-                distance: '20 miles southwest',
-                difficulty: 'Moderate',
-                activities: ['Hiking', 'Fishing', 'Photography'],
-                desc: 'Experience the serenity of Bullion King Lake, a 10-acre alpine gem nestled in the San Juan Mountains. Surrounded by 13,000-foot peaks, this moderately difficult 6.4-mile round trip hike offers breathtaking views and excellent golden trout fishing. Ideal for summer and early fall adventures.',
-              },
               {
                 name: 'Ice Lakes Basin',
                 elev: '12,260 ft',
