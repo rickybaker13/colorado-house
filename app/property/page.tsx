@@ -236,16 +236,29 @@ export default function PropertyPage() {
 
       {/* CTA Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="bg-gradient-to-r from-mountain-dark to-mountain-medium rounded-lg p-12 text-white text-center">
-          <h2 className="font-serif text-4xl font-bold mb-4">
-            Ready to Book?
-          </h2>
-          <p className="text-lg mb-8 text-gray-100">
-            Secure your dates and experience the best of mountain living
-          </p>
-          <Button href="/booking" size="lg" variant="secondary">
-            Check Availability
-          </Button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="bg-gradient-to-r from-primary-light to-primary-medium rounded-lg p-12 text-white text-center">
+            <h2 className="font-serif text-3xl font-bold mb-4">
+              View Full Gallery
+            </h2>
+            <p className="text-lg mb-8 text-gray-100">
+              See all 32 photos of the property
+            </p>
+            <Button href="/gallery" size="lg" variant="secondary">
+              Photo Gallery
+            </Button>
+          </div>
+          <div className="bg-gradient-to-r from-mountain-dark to-mountain-medium rounded-lg p-12 text-white text-center">
+            <h2 className="font-serif text-4xl font-bold mb-4">
+              Ready to Book?
+            </h2>
+            <p className="text-lg mb-8 text-gray-100">
+              Secure your dates and experience the best of mountain living
+            </p>
+            <Button href="/booking" size="lg" variant="secondary">
+              Check Availability
+            </Button>
+          </div>
         </div>
       </section>
     </div>

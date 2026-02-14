@@ -14,6 +14,7 @@ export default function Header() {
     { href: '/purgatory-resort', label: 'Resort' },
     { href: '/needles-mountains', label: 'Needles' },
     { href: '/lakes-water', label: 'Lakes' },
+    { href: '/gallery', label: 'Gallery' },
     { href: '/experience', label: 'Experience' },
     { href: '/practical-info', label: 'Info' },
   ];
