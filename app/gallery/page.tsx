@@ -17,46 +17,57 @@ export default function GalleryPage() {
 
   // Gallery organized by room/area, starting with exterior
   const galleryImages: GalleryImage[] = [
+    // Bullion King Lake
+    { id: 1, src: '/images/bullion-king-lake.jpg', alt: 'Bullion King Lake reflection', category: 'Bullion King Lake' },
+    { id: 2, src: '/images/bullion-king-lake-2.jpg', alt: 'Dramatic rocky peaks', category: 'Bullion King Lake' },
+    { id: 3, src: '/images/bullion-king-lake-3.jpg', alt: 'Alpine lake vista', category: 'Bullion King Lake' },
+    { id: 4, src: '/images/bullion-king-lake-4.jpg', alt: 'Emerald waters', category: 'Bullion King Lake' },
+    { id: 5, src: '/images/bullion-king-lake-5.jpg', alt: 'Wildflowers by the lake', category: 'Bullion King Lake' },
+    { id: 6, src: '/images/bullion-king-lake-6.jpg', alt: 'Alpine scenic view', category: 'Bullion King Lake' },
+    { id: 7, src: '/images/bullion-king-lake-7.jpg', alt: 'Crystal clear waters', category: 'Bullion King Lake' },
+    { id: 8, src: '/images/bullion-king-lake-8.jpg', alt: 'Mountain reflections', category: 'Bullion King Lake' },
+    { id: 9, src: '/images/bullion-king-lake-9.jpg', alt: 'Alpine panorama', category: 'Bullion King Lake' },
+
     // Exterior
-    { id: 1, src: '/images/exterior-1.jpg', alt: 'Front exterior view', category: 'Exterior' },
-    { id: 2, src: '/images/exterior-2.jpg', alt: 'Entrance area', category: 'Exterior' },
-    { id: 3, src: '/images/exterior-3.jpg', alt: 'Back patio and deck', category: 'Exterior' },
+    { id: 10, src: '/images/exterior-1.jpg', alt: 'Front exterior view', category: 'Exterior' },
+    { id: 11, src: '/images/exterior-2.jpg', alt: 'Entrance area', category: 'Exterior' },
+    { id: 12, src: '/images/exterior-3.jpg', alt: 'Back patio and deck', category: 'Exterior' },
 
     // Living Room
-    { id: 4, src: '/images/living-room-1.jpg', alt: 'Living room seating', category: 'Living Room' },
-    { id: 5, src: '/images/living-room-2.jpg', alt: 'Main living area', category: 'Living Room' },
+    { id: 13, src: '/images/living-room-1.jpg', alt: 'Living room seating', category: 'Living Room' },
+    { id: 14, src: '/images/living-room-2.jpg', alt: 'Main living area', category: 'Living Room' },
 
     // Dining
-    { id: 6, src: '/images/dining-1.jpg', alt: 'Dining area', category: 'Dining' },
+    { id: 15, src: '/images/dining-1.jpg', alt: 'Dining area', category: 'Dining' },
 
     // Kitchen
-    { id: 7, src: '/images/kitchen-1.jpg', alt: 'Kitchen overview', category: 'Kitchen' },
-    { id: 8, src: '/images/kitchen-2.jpg', alt: 'Kitchen appliances', category: 'Kitchen' },
-    { id: 9, src: '/images/kitchen-3.jpg', alt: 'Kitchen details', category: 'Kitchen' },
+    { id: 16, src: '/images/kitchen-1.jpg', alt: 'Kitchen overview', category: 'Kitchen' },
+    { id: 17, src: '/images/kitchen-2.jpg', alt: 'Kitchen appliances', category: 'Kitchen' },
+    { id: 18, src: '/images/kitchen-3.jpg', alt: 'Kitchen details', category: 'Kitchen' },
 
     // Master Bedroom
-    { id: 10, src: '/images/bedroom-master-1.jpg', alt: 'Master bedroom', category: 'Master Bedroom' },
+    { id: 19, src: '/images/bedroom-master-1.jpg', alt: 'Master bedroom', category: 'Master Bedroom' },
 
     // Bathrooms
-    { id: 11, src: '/images/bathroom-1.jpg', alt: 'Master bathroom', category: 'Bathrooms' },
-    { id: 12, src: '/images/bathroom-2.jpg', alt: 'Guest bathroom', category: 'Bathrooms' },
+    { id: 20, src: '/images/bathroom-1.jpg', alt: 'Master bathroom', category: 'Bathrooms' },
+    { id: 21, src: '/images/bathroom-2.jpg', alt: 'Guest bathroom', category: 'Bathrooms' },
 
     // Guest Bedrooms
-    { id: 13, src: '/images/bedroom-guest-1.jpg', alt: 'Guest bedroom 1', category: 'Guest Bedrooms' },
-    { id: 14, src: '/images/bedroom-guest-2.jpg', alt: 'Guest bedroom 2', category: 'Guest Bedrooms' },
+    { id: 22, src: '/images/bedroom-guest-1.jpg', alt: 'Guest bedroom 1', category: 'Guest Bedrooms' },
+    { id: 23, src: '/images/bedroom-guest-2.jpg', alt: 'Guest bedroom 2', category: 'Guest Bedrooms' },
 
     // Utilities
-    { id: 15, src: '/images/laundry.jpg', alt: 'Laundry room', category: 'Utilities' },
+    { id: 24, src: '/images/laundry.jpg', alt: 'Laundry room', category: 'Utilities' },
 
     // Views & Details
-    { id: 16, src: '/images/views-1.jpg', alt: 'Mountain views', category: 'Views' },
-    { id: 17, src: '/images/views-2.jpg', alt: 'Property views', category: 'Views' },
-    { id: 18, src: '/images/detail-1.jpg', alt: 'Interior detail 1', category: 'Views' },
-    { id: 19, src: '/images/detail-2.jpg', alt: 'Interior detail 2', category: 'Views' },
-    { id: 20, src: '/images/detail-3.jpg', alt: 'Interior detail 3', category: 'Views' },
+    { id: 25, src: '/images/views-1.jpg', alt: 'Mountain views', category: 'Views' },
+    { id: 26, src: '/images/views-2.jpg', alt: 'Property views', category: 'Views' },
+    { id: 27, src: '/images/detail-1.jpg', alt: 'Interior detail 1', category: 'Views' },
+    { id: 28, src: '/images/detail-2.jpg', alt: 'Interior detail 2', category: 'Views' },
+    { id: 29, src: '/images/detail-3.jpg', alt: 'Interior detail 3', category: 'Views' },
   ];
 
-  const categories = ['Exterior', 'Living Room', 'Dining', 'Kitchen', 'Master Bedroom', 'Guest Bedrooms', 'Bathrooms', 'Utilities', 'Views'];
+  const categories = ['Bullion King Lake', 'Exterior', 'Living Room', 'Dining', 'Kitchen', 'Master Bedroom', 'Guest Bedrooms', 'Bathrooms', 'Utilities', 'Views'];
 
   const groupedImages = categories.map(category => ({
     category,

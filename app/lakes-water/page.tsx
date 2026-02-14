@@ -90,39 +90,33 @@ export default function LakesWater() {
             </div>
           </motion.div>
 
-          {/* Photo Gallery */}
+          {/* Photo Gallery Thumbnail + Link */}
           <motion.div
-            className="mt-12"
+            className="mt-12 flex flex-col md:flex-row gap-8 items-center"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
           >
-            <h3 className="text-2xl font-bold font-display text-primary-dark mb-6">Photo Gallery</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[
-                { src: '/images/bullion-king-lake-2.jpg', alt: 'Dramatic rocky peaks above Bullion King Lake' },
-                { src: '/images/bullion-king-lake-3.jpg', alt: 'Alpine lake surrounded by mountains' },
-                { src: '/images/bullion-king-lake-4.jpg', alt: 'Emerald waters and snow patches' },
-                { src: '/images/bullion-king-lake-5.jpg', alt: 'Wildflowers with lake and cliffs' },
-                { src: '/images/bullion-king-lake-6.jpg', alt: 'Scenic alpine vista' },
-                { src: '/images/bullion-king-lake-7.jpg', alt: 'Rocky shoreline reflections' },
-                { src: '/images/bullion-king-lake-8.jpg', alt: 'Panoramic mountain views' },
-                { src: '/images/bullion-king-lake-9.jpg', alt: 'Crystal clear alpine waters' },
-              ].map((photo, idx) => (
-                <motion.div
-                  key={idx}
-                  className="relative h-72 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow"
-                  whileHover={{ scale: 1.02 }}
-                >
-                  <Image
-                    src={photo.src}
-                    alt={photo.alt}
-                    fill
-                    className="object-contain bg-gray-100 hover:scale-105 transition-transform duration-300"
-                  />
-                </motion.div>
-              ))}
+            <div className="relative h-80 w-full md:w-96 rounded-lg overflow-hidden shadow-lg">
+              <Image
+                src="/images/bullion-king-lake-6.jpg"
+                alt="Bullion King Lake gallery thumbnail"
+                fill
+                className="object-contain bg-gray-100"
+              />
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold font-display text-primary-dark mb-4">Photo Gallery</h3>
+              <p className="text-primary-dark mb-6 leading-relaxed">
+                Explore stunning photos of Bullion King Lake captured throughout the summer season. From dramatic alpine peaks to pristine reflections and vibrant wildflowers, our gallery showcases the breathtaking beauty of this hidden gem.
+              </p>
+              <Link
+                href="/gallery"
+                className="inline-block px-8 py-3 bg-primary-light text-white font-bold rounded-lg hover:bg-primary-dark transition-colors font-display"
+              >
+                View Full Gallery
+              </Link>
             </div>
           </motion.div>
         </div>
