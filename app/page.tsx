@@ -65,7 +65,7 @@ export default function Home() {
         <div 
           className="absolute inset-0 bg-gradient-to-b from-primary-dark via-primary-medium to-primary-light"
           style={{
-            backgroundImage: 'url(https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=2560&q=90)',
+            backgroundImage: 'url(/images/hero-front-page.jpg)',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundAttachment: 'fixed',
