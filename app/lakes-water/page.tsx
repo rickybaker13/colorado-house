@@ -63,28 +63,36 @@ export default function LakesWater() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {[
               {
-                name: 'Andrews Lake',
-                elev: '9,000 ft',
-                activities: ['Camping', 'Fishing', 'Picnicking'],
-                desc: 'Popular alpine lake with stunning mountain views and excellent camping facilities.',
+                name: 'Bullion King Lake',
+                elev: '11,710 ft',
+                distance: '20 miles southwest',
+                difficulty: 'Moderate',
+                activities: ['Hiking', 'Fishing', 'Photography'],
+                desc: 'Experience the serenity of Bullion King Lake, a 10-acre alpine gem nestled in the San Juan Mountains. Surrounded by 13,000-foot peaks, this moderately difficult 6.4-mile round trip hike offers breathtaking views and excellent golden trout fishing. Ideal for summer and early fall adventures.',
+              },
+              {
+                name: 'Ice Lakes Basin',
+                elev: '12,260 ft',
+                distance: '12 miles south',
+                difficulty: 'Difficult',
+                activities: ['Hiking', 'Backpacking', 'Photography'],
+                desc: 'Embark on a challenging 7.8-mile round trip hike to the enchanting Ice Lakes Basin. Marvel at vibrant turquoise lakes framed by rugged peaks, making it a perfect spot for avid photographers and adventurous hikers. Best visited from mid-summer to early fall.',
+              },
+              {
+                name: 'Columbine Lake',
+                elev: '11,860 ft',
+                distance: '18 miles southwest',
+                difficulty: 'Moderate',
+                activities: ['Hiking', 'Fishing', 'Camping'],
+                desc: 'Discover the beauty of Columbine Lake on a 5.6-mile moderately difficult round trip hike. Surrounded by aspen and conifer forests, this alpine lake features a captivating waterfall. Ideal destination for hikers, campers, and anglers from late spring to early fall.',
               },
               {
                 name: 'Molas Lake',
                 elev: '10,908 ft',
+                distance: 'Near Silverton',
+                difficulty: 'Easy',
                 activities: ['Boating', 'Fishing', 'Scenic Views'],
-                desc: 'One of the highest alpine lakes in the region with crystal-clear waters and panoramic vistas.',
-              },
-              {
-                name: 'Haviland Lake',
-                elev: '8,800 ft',
-                activities: ['Camping', 'Swimming', 'Fishing'],
-                desc: 'Beautiful lake perfect for family camping and swimming. Great base camp for exploring the area.',
-              },
-              {
-                name: 'Various Alpine Basins',
-                elev: '10,000-12,000 ft',
-                activities: ['Backcountry', 'Photography', 'Hiking'],
-                desc: 'Numerous unnamed alpine lakes and tarns throughout the high country, ideal for explorers.',
+                desc: 'One of the highest accessible alpine lakes in the region with crystal-clear waters and panoramic vistas of the San Juan Mountains. Perfect for a scenic drive or easy lakeside visit.',
               },
             ].map((lake, idx) => (
               <motion.div
@@ -98,7 +106,11 @@ export default function LakesWater() {
                 <h3 className="text-2xl font-bold font-display text-primary-dark mb-2">
                   {lake.name}
                 </h3>
-                <p className="text-sm text-accent-water font-semibold mb-3">{lake.elev}</p>
+                <div className="flex gap-4 mb-3 text-sm text-accent-water font-semibold">
+                  <span>{lake.elev}</span>
+                  <span>{lake.distance}</span>
+                  {lake.difficulty && <span className="text-primary-light">{lake.difficulty}</span>}
+                </div>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {lake.activities.map((activity) => (
                     <span key={activity} className="bg-accent-sky bg-opacity-20 text-primary-dark text-xs px-3 py-1 rounded-full">
@@ -106,7 +118,7 @@ export default function LakesWater() {
                     </span>
                   ))}
                 </div>
-                <p className="text-primary-dark">{lake.desc}</p>
+                <p className="text-primary-dark text-sm leading-relaxed">{lake.desc}</p>
               </motion.div>
             ))}
           </div>
