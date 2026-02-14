@@ -85,9 +85,14 @@ export default function PropertyPage() {
                 <span>⭐ 4.9 (24 Reviews)</span>
               </div>
             </div>
-            <Button href="/booking" size="lg">
-              Book Now
-            </Button>
+            <div className="flex gap-4">
+              <Button href="https://www.airbnb.com/rooms/1205985906587842742" size="lg">
+                View on Airbnb
+              </Button>
+              <Button href="/booking" size="lg">
+                Book Now
+              </Button>
+            </div>
           </div>
         </div>
       </section>
