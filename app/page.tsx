@@ -71,8 +71,8 @@ export default function Home() {
       <section ref={heroRef} className="relative w-full overflow-hidden grain" style={{ height: '100vh' }}>
         <motion.div style={{ scale: heroScale }} className="absolute inset-0">
           <Image
-            src="/images/bullion-king-lake.jpg"
-            alt="Bullion King Lake in the San Juan Mountains"
+            src="/images/alpenglow-sunset.jpg"
+            alt="Alpenglow sunset on the San Juan Mountains"
             fill
             className="object-cover"
             sizes="100vw"

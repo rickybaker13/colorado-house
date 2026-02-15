@@ -30,6 +30,18 @@ export default function GalleryPage() {
     { id: 8, src: '/images/alpine-valley.jpg', alt: 'Alpine valley deep in the San Juans', category: 'Alpine', orientation: 'portrait' },
     { id: 9, src: '/images/waterfall.jpg', alt: 'Mountain waterfall in the San Juan wilderness', category: 'Alpine', orientation: 'portrait' },
     { id: 10, src: '/images/wildflowers-pass.jpg', alt: 'Wildflower meadow at alpine pass', category: 'Alpine', orientation: 'portrait' },
+    { id: 31, src: '/images/ice-lake-closeup.jpg', alt: 'Turquoise waters of Ice Lake', category: 'Alpine', orientation: 'landscape' },
+    { id: 32, src: '/images/wildflower-meadow-peaks.jpg', alt: 'Wildflower meadow with dramatic San Juan peaks', category: 'Alpine', orientation: 'portrait' },
+    { id: 33, src: '/images/sunflowers-mountain-valley.jpg', alt: 'Sunflowers and alpine valley', category: 'Alpine', orientation: 'portrait' },
+    { id: 34, src: '/images/waterfall-gorge.jpg', alt: 'Waterfall in forested gorge', category: 'Alpine', orientation: 'portrait' },
+    { id: 35, src: '/images/engineer-mountain.jpg', alt: 'Engineer Mountain with pine forest', category: 'Alpine', orientation: 'landscape' },
+    { id: 36, src: '/images/kayak-mountain-lake.jpg', alt: 'Kayaking on Molas Lake with mountain views', category: 'Alpine', orientation: 'landscape' },
+    { id: 37, src: '/images/alpenglow-sunset.jpg', alt: 'Alpenglow sunset on the San Juan Mountains', category: 'Alpine', orientation: 'landscape' },
+    { id: 38, src: '/images/ice-lakes-trail.jpg', alt: 'Trail to Ice Lake through wildflower meadows', category: 'Alpine', orientation: 'landscape' },
+    { id: 39, src: '/images/ice-lake-panoramic.jpg', alt: 'Ice Lake panoramic — turquoise water and peaks', category: 'Alpine', orientation: 'landscape' },
+    { id: 40, src: '/images/ice-lake-shore.jpg', alt: 'Ice Lake shore with deep blue water', category: 'Alpine', orientation: 'landscape' },
+    { id: 41, src: '/images/ice-lake-basin-wide.jpg', alt: 'Ice Lake Basin wide view', category: 'Alpine', orientation: 'landscape' },
+    { id: 42, src: '/images/upper-ice-lake.jpg', alt: 'Upper Ice Lake beneath rocky ridgeline', category: 'Alpine', orientation: 'landscape' },
 
     // The Townhouse exterior & grounds
     { id: 11, src: '/images/kitchen-1.jpg', alt: 'Townhouse exterior — modern mountain architecture', category: 'Exterior', orientation: 'portrait' },
