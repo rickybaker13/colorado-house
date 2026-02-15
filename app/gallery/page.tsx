@@ -44,6 +44,8 @@ export default function GalleryPage() {
     { id: 42, src: '/images/upper-ice-lake.jpg', alt: 'Upper Ice Lake beneath rocky ridgeline', category: 'Alpine', orientation: 'landscape' },
     { id: 43, src: '/images/columbine-lake.jpg', alt: 'Columbine Lake — sapphire alpine waters', category: 'Alpine', orientation: 'landscape' },
     { id: 44, src: '/images/bullion-king-lake-7.jpg', alt: 'Bullion King Lake nestled among San Juan peaks', category: 'Alpine', orientation: 'landscape' },
+    { id: 45, src: '/images/mesa-verde-cliff-dwelling.jpg', alt: 'Ancestral Puebloan cliff dwelling at Mesa Verde', category: 'Alpine', orientation: 'landscape' },
+    { id: 46, src: '/images/mesa-verde-cliff-palace.jpg', alt: 'Cliff Palace — largest cliff dwelling in North America', category: 'Alpine', orientation: 'landscape' },
 
     // The Townhouse exterior & grounds
     { id: 11, src: '/images/kitchen-1.jpg', alt: 'Townhouse exterior — modern mountain architecture', category: 'Exterior', orientation: 'portrait' },
