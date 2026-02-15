@@ -1,34 +1,43 @@
 import type { Metadata } from 'next';
-import { Inter, Merriweather } from 'next/font/google';
+import { Cormorant_Garamond, DM_Sans } from 'next/font/google';
 import LayoutWrapper from '@/components/layout/LayoutWrapper';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
-const merriweather = Merriweather({
+const cormorant = Cormorant_Garamond({
   subsets: ['latin'],
-  weight: ['400', '700'],
-  variable: '--font-serif',
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-display',
+  display: 'swap',
+});
+
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600'],
+  variable: '--font-sans',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: 'Purgatory Townhouse | Luxury Mountain Vacation Rental in Durango',
+  title: 'Purgatory Townhouse | Mountain Living in the San Juans',
   description:
-    'Experience luxury mountain living in our stunning Purgatory townhouse near Durango, Colorado. Perfect for ski vacations and summer getaways.',
+    'A luxury mountain retreat nestled in Purgatory, Colorado. Four bedrooms, breathtaking alpine views, and direct access to the San Juan Mountains.',
   keywords: [
-    'vacation rental',
-    'mountain townhouse',
-    'Durango Colorado',
-    'Purgatory ski',
-    'luxury vacation',
+    'Purgatory Colorado',
+    'mountain vacation rental',
+    'San Juan Mountains',
+    'Durango luxury rental',
+    'ski vacation Colorado',
+    'alpine retreat',
   ],
   authors: [{ name: 'Purgatory Townhouse' }],
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://purgatorytownhouse.com',
+    url: 'https://colorado-house.vercel.app',
     siteName: 'Purgatory Townhouse',
-    title: 'Luxury Mountain Vacation Rental in Durango',
-    description: 'Book your perfect mountain getaway at Purgatory Townhouse',
+    title: 'Purgatory Townhouse | Mountain Living in the San Juans',
+    description:
+      'A luxury mountain retreat nestled in Purgatory, Colorado. Breathtaking alpine views and direct access to the San Juan Mountains.',
   },
 };
 
@@ -39,7 +48,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${merriweather.variable} font-sans antialiased`}>
+      <body
+        className={`${cormorant.variable} ${dmSans.variable} font-sans antialiased`}
+      >
         <LayoutWrapper>{children}</LayoutWrapper>
       </body>
     </html>

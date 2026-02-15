@@ -1,90 +1,155 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Roboto:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300;1,9..40,400&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Design System Colors */
 :root {
-  /* Primary Palette - Blues & Teals */
-  --color-primary-dark: #003D6C;
-  --color-primary-medium: #0074A2;
-  --color-primary-light: #009BD6;
-  
-  /* Accent Colors */
-  --color-accent-slate: #2E4C6D;
-  --color-accent-sky: #9ED2ED;
-  --color-accent-water: #B2EBF2;
-  
-  /* Neutrals */
-  --color-neutral-light: #F5F5F5;
-  --color-neutral-medium: #E5E5E5;
-  --color-neutral-dark: #D9D9D9;
-  
-  /* Functional */
-  --color-error: #dc2626;
-  --color-success: #059669;
-  --color-warning: #f59e0b;
+  --color-stone: #c4956a;
+  --color-stone-light: #d4a574;
+  --color-stone-pale: #e8d5c0;
+  --color-charcoal: #1a1a2e;
+  --color-slate: #2d2d3f;
+  --color-forest: #2d5016;
+  --color-forest-soft: #4a7c59;
+  --color-snow: #fafaf8;
+  --color-cream: #f5f0eb;
+  --color-warm-gray: #9a9590;
+  --color-mountain-blue: #5b7f95;
+  --color-mountain-deep: #3a5a6e;
+  --color-dusk: #6b5b73;
 }
 
-/* Custom Scrollbar */
+/* Thin elegant scrollbar */
 ::-webkit-scrollbar {
-  width: 10px;
+  width: 6px;
 }
-
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: var(--color-snow);
 }
-
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 5px;
+  background: var(--color-stone-pale);
+  border-radius: 3px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--color-stone);
 }
 
-/* Smooth Transitions */
-* {
-  @apply transition-colors duration-200;
+/* Base */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Typography Base */
 body {
   font-family: var(--font-sans);
-  @apply antialiased;
-  background-color: #ffffff;
-  color: #1f2937;
+  background-color: var(--color-snow);
+  color: var(--color-charcoal);
+  overflow-x: hidden;
 }
 
-/* Hero Image Overlay */
-.hero-overlay {
-  position: relative;
+/* Remove default image border radius - let components decide */
+img {
+  border-radius: 0;
 }
 
-.hero-overlay::after {
+/* Editorial typography helpers */
+.editorial-heading {
+  font-family: var(--font-display);
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.editorial-subheading {
+  font-family: var(--font-sans);
+  font-weight: 300;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+/* Grain overlay for photographic texture */
+.grain::after {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0.3),
-    rgba(0, 0, 0, 0.1)
-  );
+  inset: 0;
+  opacity: 0.03;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
 }
 
-/* Glassmorphism */
-.glass {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+/* Cinematic image treatment */
+.cinematic-image {
+  filter: contrast(1.05) saturate(0.9);
 }
 
-/* Smooth Images */
-img {
-  border-radius: 0.5rem;
+/* Parallax-ready container */
+.parallax-bg {
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* Horizontal rule - editorial style */
+.editorial-rule {
+  width: 48px;
+  height: 1px;
+  background: var(--color-stone);
+  border: none;
+}
+
+/* Selection color */
+::selection {
+  background: var(--color-stone-pale);
+  color: var(--color-charcoal);
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid var(--color-stone);
+  outline-offset: 2px;
+}
+
+/* Smooth link transitions */
+a {
+  transition: color 0.3s ease, opacity 0.3s ease;
+}
+
+/* Lightbox animation base */
+.lightbox-enter {
+  animation: lightboxIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes lightboxIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes subtlePulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }

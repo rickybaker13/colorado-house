@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   href?: string;
   children: React.ReactNode;
@@ -16,18 +16,22 @@ export default function Button({
   children,
   ...props
 }: ButtonProps) {
-  const baseStyles = 'font-semibold rounded-lg transition-colors inline-block text-center';
+  const baseStyles =
+    'inline-flex items-center justify-center gap-2 font-sans tracking-wider rounded-full transition-all duration-300 text-center';
 
   const variants = {
-    primary: 'bg-mountain-medium text-white hover:bg-mountain-dark',
-    secondary: 'bg-gold text-mountain-dark hover:bg-yellow-500',
-    outline: 'border-2 border-mountain-medium text-mountain-medium hover:bg-mountain-light hover:text-white',
+    primary: 'bg-charcoal text-snow hover:bg-charcoal-light',
+    secondary: 'bg-stone text-snow hover:bg-stone-warm',
+    outline:
+      'border border-charcoal/20 text-charcoal hover:border-charcoal/50 bg-transparent',
+    ghost:
+      'text-charcoal hover:text-stone bg-transparent',
   };
 
   const sizes = {
-    sm: 'px-4 py-2 text-sm',
-    md: 'px-6 py-3 text-base',
-    lg: 'px-8 py-4 text-lg',
+    sm: 'px-5 py-2 text-xs uppercase',
+    md: 'px-6 py-2.5 text-sm',
+    lg: 'px-8 py-3.5 text-sm uppercase',
   };
 
   const combinedClassName = `${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`;
