@@ -28,7 +28,7 @@ const config: Config = {
         'warm-gray': {
           DEFAULT: '#9a9590',
           light: '#c4bfba',
-          dark: '#6b6560',
+          dark: '#4a4540',
         },
         mountain: {
           blue: '#5b7f95',
@@ -38,15 +38,28 @@ const config: Config = {
         dusk: '#6b5b73',
       },
       fontFamily: {
-        display: ['"Cormorant Garamond"', 'serif'],
+        display: ['"Cormorant Garamond"', 'Georgia', 'serif'],
         sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
       },
       fontSize: {
-        'display-xl': ['clamp(3rem, 8vw, 7rem)', { lineHeight: '1.05', letterSpacing: '-0.03em' }],
-        'display-lg': ['clamp(2.5rem, 5vw, 4.5rem)', { lineHeight: '1.1', letterSpacing: '-0.02em' }],
-        'display-md': ['clamp(2rem, 4vw, 3rem)', { lineHeight: '1.15', letterSpacing: '-0.02em' }],
-        'body-lg': ['1.125rem', { lineHeight: '1.7' }],
-        'caption': ['0.75rem', { lineHeight: '1.5', letterSpacing: '0.15em' }],
+        /* Hero - massive impact */
+        'display-hero': ['clamp(3.5rem, 9vw, 8rem)', { lineHeight: '1.0', letterSpacing: '-0.03em', fontWeight: '300' }],
+        /* Page titles */
+        'display-xl': ['clamp(3rem, 7vw, 6rem)', { lineHeight: '1.05', letterSpacing: '-0.02em', fontWeight: '300' }],
+        /* Section headings */
+        'display-lg': ['clamp(2.25rem, 5vw, 4rem)', { lineHeight: '1.1', letterSpacing: '-0.02em', fontWeight: '300' }],
+        /* Sub-section headings */
+        'display-md': ['clamp(1.75rem, 3.5vw, 2.75rem)', { lineHeight: '1.15', letterSpacing: '-0.01em', fontWeight: '300' }],
+        /* Body text - generous for readability */
+        'body-xl': ['1.375rem', { lineHeight: '1.75', fontWeight: '300' }],
+        'body-lg': ['1.25rem', { lineHeight: '1.7', fontWeight: '300' }],
+        'body-md': ['1.0625rem', { lineHeight: '1.7' }],
+        /* Labels */
+        'label': ['1rem', { lineHeight: '1.5', letterSpacing: '0.06em' }],
+        'label-sm': ['0.9375rem', { lineHeight: '1.5', letterSpacing: '0.08em' }],
+        /* Captions */
+        'caption': ['0.8125rem', { lineHeight: '1.5', letterSpacing: '0.18em' }],
+        'caption-sm': ['0.6875rem', { lineHeight: '1.5', letterSpacing: '0.2em' }],
       },
       spacing: {
         '18': '4.5rem',
