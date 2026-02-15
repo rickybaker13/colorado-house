@@ -19,7 +19,7 @@ export default function GalleryPage() {
 
   /* CORRECTED photo assignments based on actual image content and dimensions */
   const galleryImages: GalleryImage[] = [
-    // Alpine scenery (all landscape 1280x960 except alpine-valley & waterfall which are portrait)
+    // Alpine scenery
     { id: 1, src: '/images/bullion-king-lake.jpg', alt: 'Bullion King Lake — peaks and reflection', category: 'Alpine', orientation: 'landscape' },
     { id: 2, src: '/images/bullion-king-lake-2.jpg', alt: 'Rocky crags above Bullion King Lake', category: 'Alpine', orientation: 'landscape' },
     { id: 3, src: '/images/bullion-king-lake-3.jpg', alt: 'Mountain panorama near Purgatory', category: 'Alpine', orientation: 'landscape' },
@@ -84,9 +84,9 @@ export default function GalleryPage() {
   const selectedImage = selectedIndex !== null ? filteredImages[selectedIndex] : null;
 
   return (
-    <main className="bg-snow min-h-screen">
+    <main style={{ backgroundColor: '#fafaf8', minHeight: '100vh' }}>
       {/* Hero */}
-      <section className="relative h-[50vh] md:h-[60vh] overflow-hidden grain">
+      <section className="relative overflow-hidden grain" style={{ height: '55vh', minHeight: '380px' }}>
         <Image
           src="/images/bullion-king-lake-5.jpg"
           alt="Alpine wildflowers and mountain lake"
@@ -94,11 +94,16 @@ export default function GalleryPage() {
           className="object-cover"
           sizes="100vw"
           priority
+          quality={90}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/25 to-black/50" />
+        <div
+          className="absolute inset-0"
+          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.2) 40%, rgba(0,0,0,0.45) 100%)' }}
+        />
         <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-6">
           <motion.p
-            className="font-sans text-caption uppercase tracking-[0.3em] text-white/70 mb-5"
+            className="font-sans"
+            style={{ fontSize: '13px', letterSpacing: '0.3em', textTransform: 'uppercase' as const, color: 'rgba(255,255,255,0.7)', marginBottom: '20px' }}
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
@@ -106,7 +111,8 @@ export default function GalleryPage() {
             The Townhouse &amp; San Juan Mountains
           </motion.p>
           <motion.h1
-            className="font-display text-display-xl text-white drop-shadow-lg"
+            className="font-display"
+            style={{ fontSize: 'clamp(42px, 7vw, 80px)', fontWeight: 300, color: '#ffffff', textShadow: '0 2px 15px rgba(0,0,0,0.3)' }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.3 }}
@@ -117,8 +123,11 @@ export default function GalleryPage() {
       </section>
 
       {/* Filter bar */}
-      <section className="sticky top-18 z-30 bg-snow/95 backdrop-blur-md border-b border-stone-pale/40">
-        <div className="max-w-7xl mx-auto px-6 py-5 flex gap-8 overflow-x-auto scrollbar-none">
+      <section
+        className="sticky z-30"
+        style={{ top: '72px', backgroundColor: 'rgba(250,250,248,0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(212,165,116,0.25)' }}
+      >
+        <div className="max-w-7xl mx-auto px-6 flex overflow-x-auto" style={{ padding: '18px 24px', gap: '32px' }}>
           {categories.map((cat) => (
             <button
               key={cat}
@@ -126,25 +135,35 @@ export default function GalleryPage() {
                 setActiveCategory(cat);
                 setSelectedIndex(null);
               }}
-              className={`font-sans text-label-sm tracking-wider whitespace-nowrap transition-all duration-300 pb-1 ${
-                activeCategory === cat
-                  ? 'text-charcoal border-b-2 border-charcoal'
-                  : 'text-warm-gray hover:text-charcoal'
-              }`}
+              className="font-sans whitespace-nowrap transition-all duration-300"
+              style={{
+                fontSize: '13px',
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase' as const,
+                paddingBottom: '4px',
+                color: activeCategory === cat ? '#1a1a2e' : '#9a9590',
+                borderBottom: activeCategory === cat ? '2px solid #1a1a2e' : '2px solid transparent',
+                background: 'none',
+                border: 'none',
+                borderBottomWidth: '2px',
+                borderBottomStyle: 'solid',
+                borderBottomColor: activeCategory === cat ? '#1a1a2e' : 'transparent',
+                cursor: 'pointer',
+              }}
             >
               {cat}
             </button>
           ))}
-          <span className="ml-auto font-sans text-caption text-warm-gray self-center whitespace-nowrap">
+          <span className="font-sans self-center whitespace-nowrap" style={{ marginLeft: 'auto', fontSize: '13px', color: '#9a9590' }}>
             {filteredImages.length} photos
           </span>
         </div>
       </section>
 
-      {/* Masonry grid — using correct aspect ratios per image orientation */}
-      <section className="py-10 px-4 md:px-6">
+      {/* Masonry grid */}
+      <section style={{ padding: '40px 16px 60px' }}>
         <div className="max-w-7xl mx-auto">
-          <div className="columns-1 sm:columns-2 lg:columns-3 gap-3 md:gap-4">
+          <div className="columns-1 sm:columns-2 lg:columns-3" style={{ gap: '12px' }}>
             <AnimatePresence mode="popLayout">
               {filteredImages.map((image, index) => (
                 <motion.div
@@ -154,15 +173,13 @@ export default function GalleryPage() {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.4, delay: index * 0.02 }}
-                  className="relative mb-3 md:mb-4 break-inside-avoid cursor-pointer group overflow-hidden"
+                  className="relative break-inside-avoid cursor-pointer group overflow-hidden"
+                  style={{ marginBottom: '12px' }}
                   onClick={() => setSelectedIndex(index)}
                 >
                   <div
-                    className={`relative ${
-                      image.orientation === 'portrait'
-                        ? 'aspect-[3/4]'
-                        : 'aspect-[4/3]'
-                    }`}
+                    className="relative"
+                    style={{ aspectRatio: image.orientation === 'portrait' ? '3/4' : '4/3' }}
                   >
                     <Image
                       src={image.src}
@@ -170,10 +187,16 @@ export default function GalleryPage() {
                       fill
                       className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      quality={85}
                     />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-500" />
+                    <div
+                      className="absolute inset-0 transition-colors duration-500"
+                      style={{ backgroundColor: 'rgba(0,0,0,0)' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.1)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0)')}
+                    />
                   </div>
-                  <p className="mt-2.5 mb-1 font-sans text-caption-sm text-warm-gray tracking-wide">
+                  <p className="font-sans" style={{ marginTop: '10px', marginBottom: '4px', fontSize: '13px', color: '#9a9590', letterSpacing: '0.03em' }}>
                     {image.alt}
                   </p>
                 </motion.div>
@@ -191,12 +214,14 @@ export default function GalleryPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 bg-charcoal/95 backdrop-blur-sm z-50 flex items-center justify-center"
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            style={{ backgroundColor: 'rgba(26,26,46,0.95)', backdropFilter: 'blur(4px)' }}
             onClick={() => setSelectedIndex(null)}
           >
             <button
               onClick={() => setSelectedIndex(null)}
-              className="absolute top-6 right-6 text-white/60 hover:text-white z-50 p-2 transition-colors"
+              className="absolute z-50 transition-colors duration-300"
+              style={{ top: '24px', right: '24px', color: 'rgba(255,255,255,0.6)', padding: '8px', background: 'none', border: 'none', cursor: 'pointer' }}
               aria-label="Close"
             >
               <X size={28} />
@@ -204,14 +229,16 @@ export default function GalleryPage() {
 
             <button
               onClick={(e) => { e.stopPropagation(); handlePrev(); }}
-              className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 text-white/40 hover:text-white z-50 p-3 transition-colors"
+              className="absolute z-50 transition-colors duration-300"
+              style={{ left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)', padding: '12px', background: 'none', border: 'none', cursor: 'pointer' }}
               aria-label="Previous image"
             >
               <ChevronLeft size={36} />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); handleNext(); }}
-              className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 text-white/40 hover:text-white z-50 p-3 transition-colors"
+              className="absolute z-50 transition-colors duration-300"
+              style={{ right: '16px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)', padding: '12px', background: 'none', border: 'none', cursor: 'pointer' }}
               aria-label="Next image"
             >
               <ChevronRight size={36} />
@@ -223,7 +250,8 @@ export default function GalleryPage() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.3 }}
-              className="relative w-[90vw] h-[80vh] md:w-[85vw] md:h-[85vh]"
+              className="relative"
+              style={{ width: '90vw', height: '80vh', maxWidth: '1400px' }}
               onClick={(e) => e.stopPropagation()}
             >
               <Image
@@ -232,14 +260,15 @@ export default function GalleryPage() {
                 fill
                 className="object-contain"
                 sizes="90vw"
+                quality={90}
               />
             </motion.div>
 
-            <div className="absolute bottom-8 left-0 right-0 text-center">
-              <p className="font-sans text-label text-white/70 tracking-wide">
+            <div className="absolute left-0 right-0 text-center" style={{ bottom: '32px' }}>
+              <p className="font-sans" style={{ fontSize: '16px', color: 'rgba(255,255,255,0.7)', letterSpacing: '0.04em' }}>
                 {selectedImage.alt}
               </p>
-              <p className="font-sans text-caption text-white/40 mt-2">
+              <p className="font-sans" style={{ fontSize: '14px', color: 'rgba(255,255,255,0.4)', marginTop: '8px' }}>
                 {(selectedIndex ?? 0) + 1} / {filteredImages.length}
               </p>
             </div>
