@@ -40,9 +40,9 @@ export default function AlpineLakes() {
       description: 'A brilliant sapphire-colored alpine pool at the head of Mill Creek, reached by a challenging but rewarding trail off the Million Dollar Highway. The lake sits at nearly 12,700 feet surrounded by loose talus and alpine tundra, with the option to continue to Columbine Pass at 13,094 feet for even bigger views. Brook trout fishing is excellent here.',
       hike: '6.6–8.2 miles round trip via Columbine Lake Trail #509',
       driveTime: '50 min from the house',
-      image: '/images/sunflowers-mountain-valley.jpg',
-      imageAlt: 'Sunflowers in alpine valley leading to mountain lakes',
-      orientation: 'portrait' as const,
+      image: '/images/columbine-lake.jpg',
+      imageAlt: 'Columbine Lake — sapphire waters surrounded by alpine tundra',
+      orientation: 'landscape' as const,
     },
     {
       name: 'Island Lake',
@@ -50,8 +50,18 @@ export default function AlpineLakes() {
       description: 'Just beyond Ice Lake, Island Lake sits 120 feet higher in an even more dramatic setting — a crystal-clear tarn ringed by towering peaks on three sides with a small rocky island breaking the surface. The reflection of the surrounding peaks in the still water is one of the most photographed scenes in all of Colorado. Worth the extra 0.7-mile push from Ice Lake.',
       hike: 'Continue 0.7 miles past Ice Lake',
       driveTime: '45 min from the house',
-      image: '/images/ice-lake-shore.jpg',
-      imageAlt: 'Ice Lake shore with deep turquoise water and mountain ridgeline',
+      image: '/images/island-lake-panoramic.jpg',
+      imageAlt: 'Island Lake reflecting towering San Juan peaks',
+      orientation: 'landscape' as const,
+    },
+    {
+      name: 'Bullion King Lake',
+      elevation: '11,400 ft',
+      description: 'A hidden gem tucked into the mountains above Purgatory, Bullion King Lake rewards hikers with a serene alpine setting surrounded by rugged peaks and wildflower meadows. Less trafficked than the Ice Lakes trail, this moderate hike climbs through dense spruce forest before opening into a wide basin with the sparkling lake at its center. The trailhead is just a short drive from the house, making it a perfect half-day adventure.',
+      hike: '6.0 miles round trip',
+      driveTime: '15 min from the house',
+      image: '/images/bullion-king-lake-7.jpg',
+      imageAlt: 'Bullion King Lake nestled among rugged San Juan peaks',
       orientation: 'landscape' as const,
     },
   ];
@@ -130,10 +140,10 @@ export default function AlpineLakes() {
             style={{ gap: '1px', marginTop: '56px', backgroundColor: 'rgba(212,165,116,0.2)', borderRadius: '2px', overflow: 'hidden' }}
           >
             {[
-              { icon: Waves, value: '4', label: 'Featured Lakes' },
+              { icon: Waves, value: '5', label: 'Featured Lakes' },
               { icon: Mountain, value: '12,693\'', label: 'Highest Lake' },
               { icon: Ruler, value: '0–8.4', label: 'Miles to Reach' },
-              { icon: MapPin, value: '20–50 min', label: 'Drive from House' },
+              { icon: MapPin, value: '15–50 min', label: 'Drive from House' },
             ].map((stat) => (
               <div key={stat.label} className="text-center" style={{ backgroundColor: '#fafaf8', padding: '24px 16px' }}>
                 <stat.icon size={20} style={{ margin: '0 auto', color: '#c4956a', marginBottom: '10px' }} />

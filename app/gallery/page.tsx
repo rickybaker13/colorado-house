@@ -42,6 +42,8 @@ export default function GalleryPage() {
     { id: 40, src: '/images/ice-lake-shore.jpg', alt: 'Ice Lake shore with deep blue water', category: 'Alpine', orientation: 'landscape' },
     { id: 41, src: '/images/ice-lake-basin-wide.jpg', alt: 'Ice Lake Basin wide view', category: 'Alpine', orientation: 'landscape' },
     { id: 42, src: '/images/upper-ice-lake.jpg', alt: 'Upper Ice Lake beneath rocky ridgeline', category: 'Alpine', orientation: 'landscape' },
+    { id: 43, src: '/images/columbine-lake.jpg', alt: 'Columbine Lake — sapphire alpine waters', category: 'Alpine', orientation: 'landscape' },
+    { id: 44, src: '/images/bullion-king-lake-7.jpg', alt: 'Bullion King Lake nestled among San Juan peaks', category: 'Alpine', orientation: 'landscape' },
 
     // The Townhouse exterior & grounds
     { id: 11, src: '/images/kitchen-1.jpg', alt: 'Townhouse exterior — modern mountain architecture', category: 'Exterior', orientation: 'portrait' },
