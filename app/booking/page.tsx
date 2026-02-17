@@ -1,316 +1,780 @@
 'use client';
 
-import { useState } from 'react';
-import BookingForm from '@/components/booking/BookingForm';
-import Button from '@/components/common/Button';
-import { ShieldCheck, Lock } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Users,
+  PawPrint,
+  Plus,
+  Minus,
+  CreditCard,
+  Copy,
+  Check,
+  Star,
+  Clock,
+  Ban,
+  Volume2,
+  Shield,
+  Droplets,
+  ArrowUpRight,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  X,
+} from 'lucide-react';
 
-interface BookingData {
-  checkIn: string;
-  checkOut: string;
-  guests: number;
+/* ─────────────────────── types ─────────────────────── */
+
+interface PricingConfig {
+  defaultNightlyRate: number;
+  cleaningFee: number;
+  petFee: number;
+  maxGuests: number;
+  maxPets: number;
+  minNights: number;
+  btcDiscountPercent: number;
+  seasonalRates: SeasonalRate[];
 }
 
-export default function BookingPage() {
-  const [step, setStep] = useState<'availability' | 'details' | 'confirmation'>('availability');
-  const [bookingData, setBookingData] = useState<BookingData | null>(null);
+interface SeasonalRate {
+  start_date: string;
+  end_date: string;
+  nightly_rate: number;
+  label: string;
+}
 
-  const handleFormSubmit = (data: BookingData) => {
-    setBookingData(data);
-    setStep('details');
+/* ─────────────────────── helpers ─────────────────────── */
+
+function fmt(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
+function isSameDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function dateRange(start: Date, end: Date): Date[] {
+  const arr: Date[] = [];
+  const cur = new Date(start);
+  while (cur < end) {
+    arr.push(new Date(cur));
+    cur.setDate(cur.getDate() + 1);
+  }
+  return arr;
+}
+
+function rateForDate(
+  dateStr: string,
+  seasonalRates: SeasonalRate[],
+  defaultRate: number,
+): { rate: number; label: string } {
+  for (const sr of seasonalRates) {
+    if (dateStr >= sr.start_date && dateStr <= sr.end_date) {
+      return { rate: sr.nightly_rate, label: sr.label };
+    }
+  }
+  return { rate: defaultRate, label: 'Standard' };
+}
+
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+const AIRBNB_SERVICE_FEE_RATE = 0.14;
+
+const PAYMENT_METHODS = [
+  { id: 'credit_card', label: 'Credit / Debit Card', note: 'Secure Stripe payment link sent after confirmation', icon: CreditCard, address: '' },
+  { id: 'bitcoin', label: 'Bitcoin', badge: 'SAVE 15%', icon: null, address: 'bc1q_YOUR_BTC_ADDRESS_HERE' },
+  { id: 'stablecoin', label: 'Stablecoin', note: 'USDC on Base', icon: null, address: '0x_YOUR_STABLECOIN_ADDRESS_HERE' },
+  { id: 'venmo', label: 'Venmo', icon: null, address: '@YourVenmoHandle' },
+  { id: 'cashapp', label: 'Cash App', icon: null, address: '$YourCashAppTag' },
+  { id: 'zelle', label: 'Zelle', icon: null, address: 'your-email@example.com' },
+];
+
+const REVIEWS = [
+  { name: 'Sarah & Family', location: 'Dallas, TX', date: 'January 2026', stars: 5, text: 'Absolutely perfect mountain getaway! The townhouse was spotless, spacious, and the kids loved being steps from the ski lift. We\'re already planning our summer trip back.' },
+  { name: 'Mike & Jennifer', location: 'Phoenix, AZ', date: 'December 2025', stars: 5, text: 'The views from this place are unreal. Woke up every morning to snow-capped peaks. Hot tub after skiing was the highlight. Communication with the host was excellent.' },
+  { name: 'The Rodriguez Family', location: 'Albuquerque, NM', date: 'October 2025', stars: 5, text: 'Came for the fall colors and were blown away. The townhouse is even better than the photos. Four bedrooms meant everyone had their own space. Durango is only 25 min away for dinners.' },
+  { name: 'Chris & Group', location: 'Austin, TX', date: 'August 2025', stars: 5, text: 'Brought a group of 8 for a hiking trip. Purgatory in summer is incredible \u2014 wildflowers everywhere, 70\u00b0 days. The place was perfect as a home base. Already recommended to friends.' },
+];
+
+/* ────────────────── copy‑to‑clipboard ────────────────── */
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+      className="ml-2 p-1.5 rounded-md transition-colors duration-200 hover:bg-white/10"
+      title="Copy"
+    >
+      {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} className="text-stone-light" />}
+    </button>
+  );
+}
+
+/* ──────────────────── counter widget ──────────────────── */
+
+function Counter({ label, value, min, max, onChange, note }: { label: string; value: number; min: number; max: number; onChange: (v: number) => void; note?: string }) {
+  return (
+    <div className="flex items-center justify-between py-3">
+      <div>
+        <span className="font-sans text-sm text-snow">{label}</span>
+        {note && <p className="text-xs text-stone-light mt-0.5">{note}</p>}
+      </div>
+      <div className="flex items-center gap-3">
+        <button type="button" disabled={value <= min} onClick={() => onChange(value - 1)} className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-snow disabled:opacity-30 hover:border-stone transition-colors">
+          <Minus size={14} />
+        </button>
+        <span className="w-6 text-center font-sans text-snow">{value}</span>
+        <button type="button" disabled={value >= max} onClick={() => onChange(value + 1)} className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-snow disabled:opacity-30 hover:border-stone transition-colors">
+          <Plus size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════ PAGE ═══════════════════════ */
+
+export default function BookingPage() {
+  /* ── api state ── */
+  const [pricing, setPricing] = useState<PricingConfig | null>(null);
+  const [blockedDates, setBlockedDates] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+
+  /* ── calendar state ── */
+  const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
+  const [viewMonth, setViewMonth] = useState(today.getMonth());
+  const [viewYear, setViewYear] = useState(today.getFullYear());
+  const [checkIn, setCheckIn] = useState<Date | null>(null);
+  const [checkOut, setCheckOut] = useState<Date | null>(null);
+  const [hoverDate, setHoverDate] = useState<Date | null>(null);
+
+  /* ── form state ── */
+  const [guests, setGuests] = useState(1);
+  const [pets, setPets] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState('credit_card');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [message, setMessage] = useState('');
+
+  /* ── submit state ── */
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [bookingId, setBookingId] = useState<string | null>(null);
+
+  /* ── fetch data ── */
+  useEffect(() => {
+    async function load() {
+      try {
+        const [calRes, priceRes] = await Promise.all([
+          fetch('/api/calendar/airbnb'),
+          fetch('/api/pricing'),
+        ]);
+        const calData = await calRes.json();
+        const priceData = await priceRes.json();
+        setBlockedDates(new Set(calData.blockedDates || []));
+        setPricing(priceData);
+      } catch (err) {
+        console.error('Failed to load booking data', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  const cfg = pricing ?? {
+    defaultNightlyRate: 250,
+    cleaningFee: 275,
+    petFee: 200,
+    maxGuests: 10,
+    maxPets: 2,
+    minNights: 2,
+    btcDiscountPercent: 15,
+    seasonalRates: [],
   };
 
+  /* ── calendar helpers ── */
+  const isBlocked = useCallback((d: Date) => blockedDates.has(fmt(d)), [blockedDates]);
+
+  const rangeHasBlock = useCallback(
+    (start: Date, end: Date) => {
+      const cur = new Date(start);
+      while (cur < end) {
+        if (blockedDates.has(fmt(cur))) return true;
+        cur.setDate(cur.getDate() + 1);
+      }
+      return false;
+    },
+    [blockedDates],
+  );
+
+  const handleDateClick = useCallback(
+    (d: Date) => {
+      if (isBlocked(d) || d < today) return;
+      if (!checkIn || (checkIn && checkOut)) {
+        setCheckIn(d);
+        setCheckOut(null);
+        return;
+      }
+      if (d <= checkIn) {
+        setCheckIn(d);
+        setCheckOut(null);
+        return;
+      }
+      const nightCount = Math.round((d.getTime() - checkIn.getTime()) / 86400000);
+      if (nightCount < cfg.minNights) return;
+      if (rangeHasBlock(checkIn, d)) return;
+      setCheckOut(d);
+    },
+    [checkIn, checkOut, isBlocked, rangeHasBlock, today, cfg.minNights],
+  );
+
+  function isInRange(d: Date): boolean {
+    if (!checkIn) return false;
+    const end = checkOut ?? hoverDate;
+    if (!end || end <= checkIn) return false;
+    return d > checkIn && d < end;
+  }
+
+  /* ── pricing calc ── */
+  const nightlyBreakdown = useMemo(() => {
+    if (!checkIn || !checkOut) return [];
+    const nights = dateRange(checkIn, checkOut);
+    const grouped: Record<string, { rate: number; label: string; count: number }> = {};
+    for (const nd of nights) {
+      const { rate, label } = rateForDate(fmt(nd), cfg.seasonalRates, cfg.defaultNightlyRate);
+      const key = `${label}-${rate}`;
+      if (!grouped[key]) grouped[key] = { rate, label, count: 0 };
+      grouped[key].count++;
+    }
+    return Object.values(grouped);
+  }, [checkIn, checkOut, cfg]);
+
+  const nightlyTotal = nightlyBreakdown.reduce((s, g) => s + g.rate * g.count, 0);
+  const cleaningFee = cfg.cleaningFee;
+  const petFee = pets > 0 ? cfg.petFee : 0;
+  const subtotal = nightlyTotal + cleaningFee + petFee;
+  const airbnbTotal = Math.round(subtotal * (1 + AIRBNB_SERVICE_FEE_RATE));
+  const directSavings = airbnbTotal - subtotal;
+  const btcDiscount = Math.round(subtotal * (cfg.btcDiscountPercent / 100));
+  const btcTotal = subtotal - btcDiscount;
+  const totalNights = checkIn && checkOut ? Math.round((checkOut.getTime() - checkIn.getTime()) / 86400000) : 0;
+
+  /* ── submit ── */
+  const canSubmit = checkIn && checkOut && name.trim() && email.trim() && !submitting;
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canSubmit || !checkIn || !checkOut) return;
+    setSubmitting(true);
+    setSubmitError('');
+
+    const selectedMethod = PAYMENT_METHODS.find(p => p.id === paymentMethod);
+    const isBtc = paymentMethod === 'bitcoin';
+
+    try {
+      const res = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          guest_name: name.trim(),
+          guest_email: email.trim(),
+          guest_phone: phone.trim() || null,
+          guest_message: message.trim() || null,
+          check_in: fmt(checkIn),
+          check_out: fmt(checkOut),
+          num_guests: guests,
+          num_pets: pets,
+          nightly_total: nightlyTotal,
+          cleaning_fee: cleaningFee,
+          pet_fee: petFee,
+          subtotal,
+          btc_discount: isBtc ? btcDiscount : 0,
+          final_total: isBtc ? btcTotal : subtotal,
+          payment_method: selectedMethod?.label.toLowerCase() ?? paymentMethod,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSubmitError(data.error || 'Something went wrong.');
+        setSubmitting(false);
+        return;
+      }
+      setBookingId(data.bookingId);
+      setSubmitted(true);
+    } catch {
+      setSubmitError('Network error. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  /* ── calendar grid ── */
+  function renderCalendar(month: number, year: number) {
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cells: React.ReactNode[] = [];
+    for (let i = 0; i < firstDay; i++) cells.push(<div key={`e-${i}`} />);
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, month, d);
+      const dateStr = fmt(date);
+      const blocked = isBlocked(date);
+      const past = date < today;
+      const disabled = blocked || past;
+      const isCheckIn = checkIn && isSameDay(date, checkIn);
+      const isCheckOut = checkOut && isSameDay(date, checkOut);
+      const inRange = isInRange(date);
+      const { rate } = rateForDate(dateStr, cfg.seasonalRates, cfg.defaultNightlyRate);
+
+      let bg = '';
+      let text = 'text-snow';
+      if (disabled) { text = 'text-white/20'; bg = ''; }
+      else if (isCheckIn || isCheckOut) { bg = 'bg-stone'; text = 'text-charcoal'; }
+      else if (inRange) { bg = 'bg-stone/20'; }
+
+      cells.push(
+        <button
+          key={d}
+          type="button"
+          disabled={disabled}
+          onClick={() => handleDateClick(date)}
+          onMouseEnter={() => !disabled && setHoverDate(date)}
+          onMouseLeave={() => setHoverDate(null)}
+          className={`relative flex flex-col items-center justify-center rounded-lg py-1.5 transition-all duration-150 ${bg} ${text} ${disabled ? 'cursor-not-allowed line-through' : 'cursor-pointer hover:bg-stone/30'}`}
+          style={{ minHeight: '52px' }}
+        >
+          <span className="text-sm font-sans">{d}</span>
+          {!disabled && (
+            <span className="text-[10px] font-sans opacity-60">${rate}</span>
+          )}
+        </button>,
+      );
+    }
+    return cells;
+  }
+
+  function prevMonth() {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(viewYear - 1); }
+    else setViewMonth(viewMonth - 1);
+  }
+  function nextMonth() {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(viewYear + 1); }
+    else setViewMonth(viewMonth + 1);
+  }
+
+  /* ──────────── render ──────────── */
+
+  if (submitted) {
+    return (
+      <div className="min-h-screen bg-charcoal pt-28 pb-20">
+        <div className="max-w-2xl mx-auto px-4">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center">
+            <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 size={40} className="text-green-400" />
+            </div>
+            <h1 className="font-display text-display-md text-snow mb-4">Booking Request Received</h1>
+            <p className="font-sans text-body-lg text-white/60 mb-10">We&apos;ll confirm availability and send payment instructions shortly.</p>
+
+            <div className="bg-charcoal-light rounded-2xl p-8 text-left space-y-4 border border-white/5">
+              <div className="flex justify-between text-sm font-sans">
+                <span className="text-white/50">Booking ID</span>
+                <span className="text-stone-light font-mono">#{bookingId}</span>
+              </div>
+              <div className="flex justify-between text-sm font-sans">
+                <span className="text-white/50">Check-in</span>
+                <span className="text-snow">{checkIn?.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}</span>
+              </div>
+              <div className="flex justify-between text-sm font-sans">
+                <span className="text-white/50">Check-out</span>
+                <span className="text-snow">{checkOut?.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}</span>
+              </div>
+              <div className="flex justify-between text-sm font-sans">
+                <span className="text-white/50">Guests</span>
+                <span className="text-snow">{guests} {guests === 1 ? 'guest' : 'guests'}{pets > 0 ? `, ${pets} ${pets === 1 ? 'pet' : 'pets'}` : ''}</span>
+              </div>
+              <div className="flex justify-between text-sm font-sans">
+                <span className="text-white/50">Payment</span>
+                <span className="text-snow">{PAYMENT_METHODS.find(p => p.id === paymentMethod)?.label}</span>
+              </div>
+              <div className="border-t border-white/10 pt-4 flex justify-between">
+                <span className="font-sans font-medium text-snow">Total</span>
+                <span className="font-sans font-semibold text-stone text-lg">${paymentMethod === 'bitcoin' ? btcTotal.toLocaleString() : subtotal.toLocaleString()}</span>
+              </div>
+            </div>
+
+            <p className="text-sm text-white/40 mt-6 font-sans">A confirmation email will be sent to {email}</p>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="font-serif text-4xl font-bold text-gray-900 mb-4">
-            Book Your Stay
-          </h1>
-          <p className="text-gray-600 text-lg">
-            Secure your perfect mountain getaway at Purgatory Townhouse
-          </p>
+    <div className="min-h-screen bg-charcoal">
+      {/* ─── Hero / Header ─── */}
+      <div className="relative pt-28 pb-12 px-4 text-center" style={{ background: 'linear-gradient(180deg, #1a1a2e 0%, #2d2d3f 100%)' }}>
+        <h1 className="font-display text-display-lg text-snow mb-3">Book Your Stay</h1>
+        <p className="font-sans text-body-lg text-white/50">Purgatory Townhouse &middot; Durango, Colorado</p>
+      </div>
+
+      {/* ─── Why Book Direct Banner ─── */}
+      <div className="border-y border-white/5" style={{ background: 'rgba(196,149,106,0.06)' }}>
+        <div className="max-w-5xl mx-auto px-4 py-5 flex flex-wrap justify-center gap-x-8 gap-y-3">
+          {[
+            'No Airbnb service fees',
+            'Save 15% with Bitcoin',
+            'Direct owner communication',
+            'Flexible payment options',
+          ].map((b) => (
+            <span key={b} className="flex items-center gap-2 text-sm font-sans text-stone-light">
+              <Check size={14} className="text-stone" />
+              {b}
+            </span>
+          ))}
         </div>
+      </div>
 
-        {/* Progress Indicator */}
-        <div className="mb-12 flex justify-center gap-4">
-          <div className={`text-center ${step === 'availability' ? 'text-mountain-medium' : 'text-gray-400'}`}>
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 font-semibold ${
-              step === 'availability' ? 'bg-mountain-medium text-white' : 'bg-gray-200 text-gray-600'
-            }`}>
-              1
-            </div>
-            <p className="text-sm">Check Availability</p>
-          </div>
-
-          <div className={`hidden sm:block flex-1 mt-5 ${step === 'details' || step === 'confirmation' ? 'border-t-2 border-mountain-medium' : 'border-t-2 border-gray-300'}`} />
-
-          <div className={`text-center ${step === 'details' ? 'text-mountain-medium' : 'text-gray-400'}`}>
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 font-semibold ${
-              ['details', 'confirmation'].includes(step) ? 'bg-mountain-medium text-white' : 'bg-gray-200 text-gray-600'
-            }`}>
-              2
-            </div>
-            <p className="text-sm">Guest Details</p>
-          </div>
-
-          <div className={`hidden sm:block flex-1 mt-5 ${step === 'confirmation' ? 'border-t-2 border-mountain-medium' : 'border-t-2 border-gray-300'}`} />
-
-          <div className={`text-center ${step === 'confirmation' ? 'text-mountain-medium' : 'text-gray-400'}`}>
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 font-semibold ${
-              step === 'confirmation' ? 'bg-mountain-medium text-white' : 'bg-gray-200 text-gray-600'
-            }`}>
-              3
-            </div>
-            <p className="text-sm">Confirm & Pay</p>
-          </div>
+      {/* ─── Loading ─── */}
+      {loading && (
+        <div className="flex items-center justify-center py-32">
+          <Loader2 size={32} className="animate-spin text-stone" />
+          <span className="ml-3 text-white/50 font-sans">Loading availability&hellip;</span>
         </div>
+      )}
 
-        {/* Content */}
-        <div className="bg-white rounded-lg shadow-lg p-8 md:p-12">
-          {step === 'availability' && (
-            <div>
-              <h2 className="font-serif text-2xl font-bold text-gray-900 mb-8">
-                Select Your Dates
-              </h2>
-              <BookingForm onSubmit={handleFormSubmit} />
-            </div>
-          )}
+      {!loading && (
+        <form onSubmit={handleSubmit}>
+          <div className="max-w-7xl mx-auto px-4 py-12 grid grid-cols-1 lg:grid-cols-3 gap-10">
+            {/* ════════ LEFT: calendar + form ════════ */}
+            <div className="lg:col-span-2 space-y-10">
 
-          {step === 'details' && bookingData && (
-            <div>
-              <h2 className="font-serif text-2xl font-bold text-gray-900 mb-8">
-                Guest Information
-              </h2>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                <form className="space-y-6">
+              {/* ── Calendar ── */}
+              <section className="bg-charcoal-light rounded-2xl p-6 md:p-8 border border-white/5">
+                <div className="flex items-center justify-between mb-6">
+                  <button type="button" onClick={prevMonth} className="p-2 rounded-full hover:bg-white/5 transition-colors">
+                    <ChevronLeft size={20} className="text-white/60" />
+                  </button>
+                  <h2 className="font-display text-display-md text-snow">
+                    {MONTH_NAMES[viewMonth]} {viewYear}
+                  </h2>
+                  <button type="button" onClick={nextMonth} className="p-2 rounded-full hover:bg-white/5 transition-colors">
+                    <ChevronRight size={20} className="text-white/60" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-7 mb-2">
+                  {DAY_LABELS.map((l) => (
+                    <div key={l} className="text-center text-caption-sm font-sans text-white/30 uppercase py-2">{l}</div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-1">
+                  {renderCalendar(viewMonth, viewYear)}
+                </div>
+                {checkIn && !checkOut && (
+                  <p className="text-xs text-white/40 font-sans mt-4 text-center">Select a check-out date ({cfg.minNights}-night minimum)</p>
+                )}
+              </section>
+
+              {/* ── Guests & Pets ── */}
+              <section className="bg-charcoal-light rounded-2xl p-6 md:p-8 border border-white/5">
+                <h3 className="font-display text-xl text-snow mb-4">Guests &amp; Pets</h3>
+                <Counter label="Guests" value={guests} min={1} max={cfg.maxGuests} onChange={setGuests} />
+                <div className="border-t border-white/5" />
+                <Counter label="Pets" value={pets} min={0} max={cfg.maxPets} onChange={setPets} note={pets > 0 ? `$${cfg.petFee} pet fee applies` : 'Pets welcome'} />
+              </section>
+
+              {/* ── Payment Method ── */}
+              <section className="bg-charcoal-light rounded-2xl p-6 md:p-8 border border-white/5">
+                <h3 className="font-display text-xl text-snow mb-5">Payment Method</h3>
+                <div className="space-y-3">
+                  {PAYMENT_METHODS.map((pm) => {
+                    const sel = paymentMethod === pm.id;
+                    return (
+                      <div key={pm.id}>
+                        <button
+                          type="button"
+                          onClick={() => setPaymentMethod(pm.id)}
+                          className={`w-full flex items-center gap-3 rounded-xl px-5 py-4 border transition-all duration-200 text-left ${sel ? 'border-stone bg-stone/10' : 'border-white/10 hover:border-white/20'}`}
+                        >
+                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${sel ? 'border-stone' : 'border-white/30'}`}>
+                            {sel && <div className="w-2 h-2 rounded-full bg-stone" />}
+                          </div>
+                          <span className="font-sans text-sm text-snow flex-1">{pm.label}</span>
+                          {pm.badge && (
+                            <span className="text-[10px] font-sans font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">{pm.badge}</span>
+                          )}
+                          {pm.note && !pm.badge && (
+                            <span className="text-xs font-sans text-white/40">{pm.note}</span>
+                          )}
+                        </button>
+                        <AnimatePresence>
+                          {sel && pm.address && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
+                              <div className="flex items-center gap-2 mt-2 ml-12 px-4 py-2.5 bg-white/5 rounded-lg">
+                                <code className="text-xs font-mono text-stone-light break-all flex-1">{pm.address}</code>
+                                <CopyButton text={pm.address} />
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {/* ── Guest Info ── */}
+              <section className="bg-charcoal-light rounded-2xl p-6 md:p-8 border border-white/5">
+                <h3 className="font-display text-xl text-snow mb-5">Guest Information</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Full Name *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-mountain-medium"
-                      placeholder="John Doe"
-                    />
+                    <label className="block text-xs font-sans text-white/50 uppercase tracking-wider mb-2">Full Name *</label>
+                    <input type="text" required value={name} onChange={(e) => setName(e.target.value)} placeholder="John Doe" className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-snow font-sans text-sm placeholder:text-white/20 focus:outline-none focus:border-stone transition-colors" />
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email Address *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-mountain-medium"
-                      placeholder="john@example.com"
-                    />
+                    <label className="block text-xs font-sans text-white/50 uppercase tracking-wider mb-2">Email *</label>
+                    <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="john@example.com" className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-snow font-sans text-sm placeholder:text-white/20 focus:outline-none focus:border-stone transition-colors" />
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone Number *
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-mountain-medium"
-                      placeholder="+1 (555) 123-4567"
-                    />
+                    <label className="block text-xs font-sans text-white/50 uppercase tracking-wider mb-2">Phone (optional)</label>
+                    <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 (555) 123-4567" className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-snow font-sans text-sm placeholder:text-white/20 focus:outline-none focus:border-stone transition-colors" />
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Special Requests
-                    </label>
-                    <textarea
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-mountain-medium"
-                      rows={4}
-                      placeholder="Let us know if you have any special requests..."
-                    />
-                  </div>
-
-                  <div className="flex gap-4 pt-4">
-                    <Button
-                      type="button"
-                      onClick={() => setStep('availability')}
-                      variant="outline"
-                      size="lg"
-                      className="flex-1"
-                    >
-                      Back
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => setStep('confirmation')}
-                      size="lg"
-                      className="flex-1"
-                    >
-                      Continue to Payment
-                    </Button>
-                  </div>
-                </form>
-
-                {/* Booking Summary */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h3 className="font-semibold text-lg text-gray-900 mb-6">
-                    Booking Summary
-                  </h3>
-                  <div className="space-y-4 pb-6 border-b border-gray-200">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Check-in</span>
-                      <span className="font-medium">
-                        {new Date(bookingData.checkIn).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Check-out</span>
-                      <span className="font-medium">
-                        {new Date(bookingData.checkOut).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Guests</span>
-                      <span className="font-medium">{bookingData.guests}</span>
-                    </div>
-                  </div>
-
-                  <div className="pt-6 space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Nightly rate</span>
-                      <span>$250</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Cleaning fee</span>
-                      <span>$75</span>
-                    </div>
-                    <div className="border-t border-gray-200 pt-3 flex justify-between font-semibold">
-                      <span>Total</span>
-                      <span className="text-mountain-medium text-lg">$575+</span>
-                    </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-sans text-white/50 uppercase tracking-wider mb-2">Message / Special Requests (optional)</label>
+                    <textarea rows={3} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Let us know if you have any special requests..." className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-snow font-sans text-sm placeholder:text-white/20 focus:outline-none focus:border-stone transition-colors resize-none" />
                   </div>
                 </div>
+              </section>
+
+              {/* ── Submit (mobile) ── */}
+              <div className="lg:hidden">
+                {submitError && (
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 mb-4">
+                    <AlertCircle size={18} className="text-red-400 shrink-0 mt-0.5" />
+                    <p className="text-sm font-sans text-red-300">{submitError}</p>
+                    <button type="button" onClick={() => setSubmitError('')} className="ml-auto"><X size={14} className="text-red-400" /></button>
+                  </div>
+                )}
+                <button
+                  type="submit"
+                  disabled={!canSubmit}
+                  className="w-full py-4 rounded-full bg-stone text-charcoal font-sans font-semibold text-sm uppercase tracking-wider transition-all duration-300 hover:bg-stone-light disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {submitting ? <><Loader2 size={18} className="animate-spin" /> Submitting&hellip;</> : 'Request Booking'}
+                </button>
               </div>
             </div>
-          )}
 
-          {step === 'confirmation' && (
-            <div className="max-w-2xl mx-auto text-center">
-              <div className="mb-8">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <ShieldCheck className="text-green-600" size={32} />
+            {/* ════════ RIGHT: sticky sidebar ════════ */}
+            <div className="lg:col-span-1">
+              <div className="lg:sticky lg:top-24 space-y-6">
+                {/* Price card */}
+                <div className="bg-charcoal-light rounded-2xl p-6 border border-white/5">
+                  <h3 className="font-display text-xl text-snow mb-5">Price Breakdown</h3>
+
+                  {totalNights > 0 ? (
+                    <div className="space-y-3 text-sm font-sans">
+                      {nightlyBreakdown.map((g) => (
+                        <div key={g.label + g.rate} className="flex justify-between">
+                          <span className="text-white/60">${g.rate} &times; {g.count} {g.count === 1 ? 'night' : 'nights'} <span className="text-white/30">({g.label})</span></span>
+                          <span className="text-snow">${(g.rate * g.count).toLocaleString()}</span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between">
+                        <span className="text-white/60">Cleaning fee</span>
+                        <span className="text-snow">${cleaningFee}</span>
+                      </div>
+                      {petFee > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-white/60">Pet fee</span>
+                          <span className="text-snow">${petFee}</span>
+                        </div>
+                      )}
+
+                      <div className="border-t border-white/10 pt-3 flex justify-between items-baseline">
+                        <span className="text-snow font-medium">Book Direct</span>
+                        <span className="text-stone text-lg font-semibold">${subtotal.toLocaleString()}</span>
+                      </div>
+
+                      {/* Airbnb comparison */}
+                      <div className="bg-white/5 rounded-xl p-4 space-y-2 mt-2">
+                        <div className="flex justify-between">
+                          <span className="text-white/40 text-xs">Airbnb total <span className="text-white/20">(+14% fee)</span></span>
+                          <span className="text-white/40 line-through text-xs">${airbnbTotal.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-green-400 text-xs font-medium">You save booking direct</span>
+                          <span className="text-green-400 text-xs font-semibold">${directSavings.toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      {/* BTC bonus */}
+                      <div className="bg-stone/10 rounded-xl p-4 space-y-2">
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-stone-light text-xs font-medium">Pay with Bitcoin</span>
+                          <span className="text-stone font-semibold">${btcTotal.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-white/30 text-xs">Total savings vs Airbnb</span>
+                          <span className="text-green-400 text-xs font-semibold">${(airbnbTotal - btcTotal).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-white/30 font-sans text-center py-4">Select dates to see pricing</p>
+                  )}
                 </div>
-                <h2 className="font-serif text-3xl font-bold text-gray-900 mb-4">
-                  Review & Payment
-                </h2>
-              </div>
 
-              <div className="bg-gray-50 rounded-lg p-8 mb-8 text-left">
-                <h3 className="font-semibold text-lg text-gray-900 mb-6">
-                  Booking Details
-                </h3>
-                {bookingData && (
-                  <div className="space-y-4">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Property</span>
-                      <span className="font-medium">Purgatory Townhouse</span>
+                {/* Submit (desktop) */}
+                <div className="hidden lg:block space-y-4">
+                  {submitError && (
+                    <div className="flex items-start gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+                      <AlertCircle size={18} className="text-red-400 shrink-0 mt-0.5" />
+                      <p className="text-sm font-sans text-red-300">{submitError}</p>
+                      <button type="button" onClick={() => setSubmitError('')} className="ml-auto"><X size={14} className="text-red-400" /></button>
                     </div>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={!canSubmit}
+                    className="w-full py-4 rounded-full bg-stone text-charcoal font-sans font-semibold text-sm uppercase tracking-wider transition-all duration-300 hover:bg-stone-light disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {submitting ? <><Loader2 size={18} className="animate-spin" /> Submitting&hellip;</> : 'Request Booking'}
+                  </button>
+                  <p className="text-[11px] text-white/25 text-center font-sans">No charge today &mdash; we&apos;ll confirm availability first</p>
+                </div>
+
+                {/* Selected dates summary */}
+                {checkIn && (
+                  <div className="bg-charcoal-light rounded-2xl p-5 border border-white/5 text-sm font-sans space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Check-in Date</span>
-                      <span className="font-medium">
-                        {new Date(bookingData.checkIn).toLocaleDateString()}
-                      </span>
+                      <span className="text-white/50">Check-in</span>
+                      <span className="text-snow">{checkIn.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
                     </div>
+                    {checkOut && (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="text-white/50">Check-out</span>
+                          <span className="text-snow">{checkOut.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-white/50">Nights</span>
+                          <span className="text-snow">{totalNights}</span>
+                        </div>
+                      </>
+                    )}
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Check-out Date</span>
-                      <span className="font-medium">
-                        {new Date(bookingData.checkOut).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Number of Guests</span>
-                      <span className="font-medium">{bookingData.guests}</span>
-                    </div>
-                    <div className="border-t border-gray-200 pt-4 flex justify-between font-bold text-lg">
-                      <span>Total Amount Due</span>
-                      <span className="text-mountain-medium">$575+</span>
+                      <span className="text-white/50">Guests</span>
+                      <span className="text-snow">{guests}{pets > 0 ? ` + ${pets} pet${pets > 1 ? 's' : ''}` : ''}</span>
                     </div>
                   </div>
                 )}
               </div>
-
-              <div className="flex gap-4 justify-center mb-8">
-                <Lock size={20} className="text-green-600" />
-                <span className="text-gray-600">
-                  Your payment is secure and encrypted
-                </span>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button
-                  onClick={() => setStep('details')}
-                  variant="outline"
-                  size="lg"
-                  className="flex-1"
-                >
-                  Back to Details
-                </Button>
-                <Button size="lg" className="flex-1">
-                  Complete Booking
-                </Button>
-              </div>
-
-              <p className="text-sm text-gray-500 mt-6">
-                This is a demo. In production, this would connect to a payment processor.
-              </p>
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* Trust Badges */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center">
-            <ShieldCheck className="mx-auto mb-3 text-mountain-medium" size={32} />
-            <h3 className="font-semibold text-gray-900 mb-2">Secure Booking</h3>
-            <p className="text-gray-600 text-sm">All transactions are encrypted and secure</p>
+          {/* ════════ BOTTOM SECTIONS ════════ */}
+          <div className="max-w-5xl mx-auto px-4 pb-20 space-y-16">
+
+            {/* ── Cancellation Policy ── */}
+            <section>
+              <h2 className="font-display text-display-md text-snow mb-6">Cancellation Policy</h2>
+              <div className="bg-charcoal-light rounded-2xl p-6 md:p-8 border border-white/5 space-y-4 font-sans text-sm">
+                <div className="flex items-start gap-3">
+                  <Shield size={18} className="text-stone shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-snow font-medium">Cancel 7+ days before check-in</p>
+                    <p className="text-white/50">50% refund of nightly rate. Cleaning fee refunded in full.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Shield size={18} className="text-white/20 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-snow font-medium">Cancel less than 7 days before check-in</p>
+                    <p className="text-white/50">No refund.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Clock size={18} className="text-stone-light shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-white/50">Check-in date changes may be possible &mdash; contact us to discuss.</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* ── House Rules ── */}
+            <section>
+              <h2 className="font-display text-display-md text-snow mb-6">House Rules</h2>
+              <div className="bg-charcoal-light rounded-2xl p-6 md:p-8 border border-white/5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 font-sans text-sm">
+                  <Rule icon={<Clock size={16} />} title="Check-in: 4:00 PM (flexible) / Check-out: 10:00 AM" />
+                  <Rule icon={<Ban size={16} />} title="No smoking, vaping, or e-cigarettes" subtitle="$500 fee + cleaning remediation" />
+                  <Rule icon={<Ban size={16} />} title="No parties or events" />
+                  <Rule icon={<Ban size={16} />} title="No commercial photography or filming" />
+                  <Rule icon={<PawPrint size={16} />} title="Pets welcome (max 2, $200 fee)" subtitle="Must be disclosed & house-trained. No pets on furniture/beds. $150/night penalty for undisclosed pets." />
+                  <Rule icon={<Droplets size={16} />} title="Hot tub rules" subtitle="5 person max. Shower before entering. No soaps, dyes, or glass. Cover when not in use. Under 18 must be supervised. Guests accept all risk." />
+                  <Rule icon={<Volume2 size={16} />} title="Quiet hours: 10 PM \u2013 7 AM" />
+                  <Rule icon={<Users size={16} />} title="Maximum guests: 10" />
+                </div>
+              </div>
+            </section>
+
+            {/* ── Guest Reviews ── */}
+            <section>
+              <h2 className="font-display text-display-md text-snow mb-6">Guest Reviews</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {REVIEWS.map((r) => (
+                  <div key={r.name} className="bg-charcoal-light rounded-2xl p-6 border border-white/5">
+                    <div className="flex items-center gap-1 mb-3">
+                      {Array.from({ length: r.stars }).map((_, i) => (
+                        <Star key={i} size={14} className="text-stone fill-stone" />
+                      ))}
+                    </div>
+                    <p className="font-sans text-sm text-white/70 leading-relaxed mb-4">&ldquo;{r.text}&rdquo;</p>
+                    <div className="font-sans">
+                      <p className="text-sm text-snow font-medium">{r.name}</p>
+                      <p className="text-xs text-white/40">{r.location} &middot; {r.date}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* ── Footer ── */}
+            <div className="text-center pt-8 border-t border-white/5">
+              <p className="font-sans text-sm text-white/40 mb-2">
+                Also available on{' '}
+                <a href="https://www.airbnb.com/rooms/1205985906587842742" target="_blank" rel="noopener noreferrer" className="text-stone-light hover:text-stone transition-colors inline-flex items-center gap-1">
+                  Airbnb <ArrowUpRight size={12} />
+                </a>
+              </p>
+              <p className="font-sans text-xs text-white/25">Book direct for the best rate</p>
+            </div>
           </div>
-          <div className="text-center">
-            <svg
-              className="mx-auto mb-3 w-8 h-8 text-mountain-medium"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <h3 className="font-semibold text-gray-900 mb-2">Best Price Guarantee</h3>
-            <p className="text-gray-600 text-sm">Lowest rates directly from the owner</p>
-          </div>
-          <div className="text-center">
-            <svg
-              className="mx-auto mb-3 w-8 h-8 text-mountain-medium"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"
-              />
-            </svg>
-            <h3 className="font-semibold text-gray-900 mb-2">24/7 Support</h3>
-            <p className="text-gray-600 text-sm">We are here to help anytime</p>
-          </div>
-        </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
+/* ── small subcomponent ── */
+function Rule({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle?: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="text-stone shrink-0 mt-0.5">{icon}</span>
+      <div>
+        <p className="text-snow">{title}</p>
+        {subtitle && <p className="text-white/40 text-xs mt-0.5">{subtitle}</p>}
       </div>
     </div>
   );
