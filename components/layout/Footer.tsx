@@ -66,13 +66,11 @@ export default function Footer() {
               </p>
             </div>
             <Link
-              href="https://www.airbnb.com/rooms/1205985906587842742"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/booking"
               className="inline-flex items-center font-sans transition-colors duration-300"
               style={{ gap: '8px', fontSize: '15px', letterSpacing: '0.06em', color: '#c4956a' }}
             >
-              Book on Airbnb
+              Book Direct
               <ArrowUpRight size={12} />
             </Link>
           </div>

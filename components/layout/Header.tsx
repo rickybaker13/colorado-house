@@ -75,9 +75,7 @@ export default function Header() {
               </Link>
             ))}
             <Link
-              href="https://www.airbnb.com/rooms/1205985906587842742"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/booking"
               className="flex items-center rounded-full transition-all duration-300 font-sans"
               style={{
                 fontSize: '14px',
@@ -91,7 +89,6 @@ export default function Header() {
               }}
             >
               Book
-              <ArrowUpRight size={14} />
             </Link>
           </div>
 
@@ -168,9 +165,7 @@ export default function Header() {
                 style={{ marginTop: '40px' }}
               >
                 <Link
-                  href="https://www.airbnb.com/rooms/1205985906587842742"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="/booking"
                   className="inline-flex items-center font-sans rounded-full transition-colors"
                   style={{
                     fontSize: '13px',
@@ -184,7 +179,6 @@ export default function Header() {
                   onClick={() => setIsOpen(false)}
                 >
                   Book Your Stay
-                  <ArrowUpRight size={14} />
                 </Link>
               </motion.div>
             </nav>

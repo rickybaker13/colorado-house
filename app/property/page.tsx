@@ -257,14 +257,11 @@ export default function PropertyPage() {
             </Link>
           </div>
           <Link
-            href="https://www.airbnb.com/rooms/1205985906587842742"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/booking"
             className="flex items-center font-sans rounded-full transition-all duration-300"
             style={{ fontSize: '14px', fontWeight: 500, letterSpacing: '0.06em', backgroundColor: '#1a1a2e', color: '#fafaf8', padding: '10px 32px', gap: '8px' }}
           >
-            Book on Airbnb
-            <ArrowUpRight size={14} />
+            Book Direct
           </Link>
         </div>
       </section>
@@ -557,14 +554,11 @@ export default function PropertyPage() {
                 View Gallery
               </Link>
               <Link
-                href="https://www.airbnb.com/rooms/1205985906587842742"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="/booking"
                 className="font-sans rounded-full transition-all duration-300 flex items-center justify-center"
                 style={{ fontSize: '15px', letterSpacing: '0.12em', textTransform: 'uppercase' as const, padding: '16px 40px', backgroundColor: '#ffffff', color: '#1a1a2e', gap: '8px' }}
               >
-                Book on Airbnb
-                <ArrowUpRight size={16} />
+                Book Your Stay
               </Link>
             </div>
           </motion.div>

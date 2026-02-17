@@ -45,6 +45,21 @@ interface SeasonalRate {
   label: string;
 }
 
+interface ChainInfo {
+  chain: string;
+  token: string;
+  address: string;
+}
+
+interface PaymentMethod {
+  id: string;
+  label: string;
+  note?: string;
+  badge?: string;
+  address: string;
+  chains?: ChainInfo[];
+}
+
 /* ─────────────────────── helpers ─────────────────────── */
 
 function fmt(d: Date): string {
@@ -86,13 +101,25 @@ const DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
 const AIRBNB_SERVICE_FEE_RATE = 0.14;
 
-const PAYMENT_METHODS = [
-  { id: 'credit_card', label: 'Credit / Debit Card', note: 'Secure Stripe payment link sent after confirmation', icon: CreditCard, address: '' },
-  { id: 'bitcoin', label: 'Bitcoin', badge: 'SAVE 15%', icon: null, address: 'bc1q_YOUR_BTC_ADDRESS_HERE' },
-  { id: 'stablecoin', label: 'Stablecoin', note: 'USDC on Base', icon: null, address: '0x_YOUR_STABLECOIN_ADDRESS_HERE' },
-  { id: 'venmo', label: 'Venmo', icon: null, address: '@YourVenmoHandle' },
-  { id: 'cashapp', label: 'Cash App', icon: null, address: '$YourCashAppTag' },
-  { id: 'zelle', label: 'Zelle', icon: null, address: 'your-email@example.com' },
+const PAYMENT_METHODS: PaymentMethod[] = [
+  { id: 'credit_card', label: 'Credit / Debit Card', note: 'Secure Stripe payment link sent after confirmation', address: '' },
+  { id: 'bitcoin', label: 'Bitcoin', badge: 'SAVE 15%', address: 'bc1q_YOUR_BTC_ADDRESS_HERE' },
+  {
+    id: 'stablecoin',
+    label: 'Stablecoin',
+    note: 'USDC & USDT',
+    address: '',
+    chains: [
+      { chain: 'Base', token: 'USDC', address: '0x_YOUR_BASE_ADDRESS_HERE' },
+      { chain: 'Ethereum', token: 'USDC / USDT', address: '0x_YOUR_ETH_ADDRESS_HERE' },
+      { chain: 'Arbitrum', token: 'USDC / USDT', address: '0x_YOUR_ARBITRUM_ADDRESS_HERE' },
+      { chain: 'Avalanche', token: 'USDC / USDT', address: '0x_YOUR_AVAX_ADDRESS_HERE' },
+      { chain: 'Solana', token: 'USDC / USDT', address: 'YOUR_SOLANA_ADDRESS_HERE' },
+    ],
+  },
+  { id: 'venmo', label: 'Venmo', address: '@YourVenmoHandle' },
+  { id: 'cashapp', label: 'Cash App', address: '$YourCashAppTag' },
+  { id: 'zelle', label: 'Zelle', address: 'your-email@example.com' },
 ];
 
 const REVIEWS = [
@@ -517,11 +544,28 @@ export default function BookingPage() {
                           )}
                         </button>
                         <AnimatePresence>
-                          {sel && pm.address && (
+                          {sel && pm.address && !pm.chains && (
                             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
                               <div className="flex items-center gap-2 mt-2 ml-12 px-4 py-2.5 bg-white/5 rounded-lg">
                                 <code className="text-xs font-mono text-stone-light break-all flex-1">{pm.address}</code>
                                 <CopyButton text={pm.address} />
+                              </div>
+                            </motion.div>
+                          )}
+                          {sel && pm.chains && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
+                              <div className="mt-2 ml-12 space-y-2">
+                                {pm.chains.map((c) => (
+                                  <div key={c.chain} className="px-4 py-2.5 bg-white/5 rounded-lg">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-xs font-sans text-white/50">{c.chain} <span className="text-white/30">&middot; {c.token}</span></span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <code className="text-xs font-mono text-stone-light break-all flex-1">{c.address}</code>
+                                      <CopyButton text={c.address} />
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
                             </motion.div>
                           )}
@@ -750,15 +794,28 @@ export default function BookingPage() {
               </div>
             </section>
 
+            {/* ── Prefer Airbnb? ── */}
+            <section className="bg-charcoal-light rounded-2xl p-6 md:p-8 border border-white/5">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+                <div>
+                  <h3 className="font-display text-xl text-snow mb-1">Prefer to book on Airbnb?</h3>
+                  <p className="font-sans text-sm text-white/40">Same property, same host &mdash; Airbnb service fees apply (~14%)</p>
+                </div>
+                <a
+                  href="https://www.airbnb.com/rooms/1205985906587842742"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 inline-flex items-center gap-2 px-6 py-3 rounded-full border border-white/15 font-sans text-sm text-white/70 hover:text-snow hover:border-white/30 transition-all duration-300"
+                >
+                  Book on Airbnb
+                  <ArrowUpRight size={14} />
+                </a>
+              </div>
+            </section>
+
             {/* ── Footer ── */}
             <div className="text-center pt-8 border-t border-white/5">
-              <p className="font-sans text-sm text-white/40 mb-2">
-                Also available on{' '}
-                <a href="https://www.airbnb.com/rooms/1205985906587842742" target="_blank" rel="noopener noreferrer" className="text-stone-light hover:text-stone transition-colors inline-flex items-center gap-1">
-                  Airbnb <ArrowUpRight size={12} />
-                </a>
-              </p>
-              <p className="font-sans text-xs text-white/25">Book direct for the best rate</p>
+              <p className="font-sans text-xs text-white/25">Book direct for the best rate &mdash; no service fees</p>
             </div>
           </div>
         </form>
