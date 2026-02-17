@@ -732,12 +732,26 @@ export default function BookingPage() {
             {/* ── Cancellation Policy ── */}
             <section>
               <h2 className="font-display text-display-md text-snow mb-6">Cancellation Policy</h2>
-              <div className="bg-charcoal-light rounded-2xl p-6 md:p-8 border border-white/5 space-y-4 font-sans text-sm">
+              <div className="bg-charcoal-light rounded-2xl p-6 md:p-8 border border-white/5 space-y-5 font-sans text-sm">
+                <div className="flex items-start gap-3">
+                  <Shield size={18} className="text-green-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-snow font-medium">Within 24 hours of booking</p>
+                    <p className="text-white/50">Full refund, no questions asked.</p>
+                  </div>
+                </div>
                 <div className="flex items-start gap-3">
                   <Shield size={18} className="text-stone shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-snow font-medium">Cancel 7+ days before check-in</p>
-                    <p className="text-white/50">50% refund of nightly rate. Cleaning fee refunded in full.</p>
+                    <p className="text-snow font-medium">Cancel 30+ days before check-in</p>
+                    <p className="text-white/50">Full refund.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Shield size={18} className="text-stone-light shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-snow font-medium">Cancel 7&ndash;30 days before check-in</p>
+                    <p className="text-white/50">50% refund.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -745,6 +759,13 @@ export default function BookingPage() {
                   <div>
                     <p className="text-snow font-medium">Cancel less than 7 days before check-in</p>
                     <p className="text-white/50">No refund.</p>
+                  </div>
+                </div>
+                <div className="border-t border-white/5 pt-5 flex items-start gap-3">
+                  <CreditCard size={18} className="text-stone shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-snow font-medium">Payment schedule</p>
+                    <p className="text-white/50">50% of the booking total is due at the time of booking. The remaining 50% is due 30 days before check-in.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
