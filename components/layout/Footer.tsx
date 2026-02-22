@@ -60,7 +60,7 @@ export default function Footer() {
             <div className="flex items-start" style={{ gap: '8px', marginBottom: '24px' }}>
               <MapPin size={14} style={{ color: '#c4956a', marginTop: '3px', flexShrink: 0 }} />
               <p className="font-sans" style={{ fontSize: '15px', color: 'rgba(255,255,255,0.5)', fontWeight: 300, lineHeight: 1.6 }}>
-                Purgatory Area<br />
+                108 Travertine Trl<br />
                 Durango, Colorado 81301<br />
                 United States
               </p>
