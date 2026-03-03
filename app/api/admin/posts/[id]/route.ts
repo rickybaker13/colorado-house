@@ -5,15 +5,19 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 async function verifyAdmin() {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const adminEmail = process.env.ADMIN_EMAIL
-  if (!user || (adminEmail && user.email !== adminEmail)) {
-    throw new Error('Unauthorized')
+  const adminEmails = process.env.ADMIN_EMAIL
+  if (!user) throw new Error('Unauthorized')
+  if (adminEmails) {
+    const allowed = adminEmails.split(',').map(e => e.trim().toLowerCase())
+    if (!allowed.includes(user.email?.toLowerCase() || '')) {
+      throw new Error('Unauthorized')
+    }
   }
   return user
 }
 
 const ALLOWED_FIELDS: Record<string, string[]> = {
-  social_posts: ['status', 'content', 'hashtags', 'performance_notes'],
+  social_posts: ['status', 'content', 'hashtags', 'image_filename', 'performance_notes'],
   blog_posts: ['status', 'content', 'title', 'excerpt'],
 }
 
