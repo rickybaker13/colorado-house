@@ -3,38 +3,44 @@
 // Social Media Publisher
 // ============================================================
 // Fetches approved posts from Supabase and publishes them
-// to all platforms via Ayrshare's unified API.
+// to all platforms via Upload-Post's unified API.
 //
 // Usage: npm run publish
 // Cron:  Runs twice daily via GitHub Actions (10am + 4pm MT)
 // ============================================================
 
-import SocialPost from "social-post-api";
 import {
   getApprovedPosts,
   markPublished,
-  type SocialPost as SocialPostType,
+  type SocialPost,
 } from "./supabase.js";
 import { PROPERTY } from "./config.js";
 
-const AYRSHARE_API_KEY = process.env.AYRSHARE_API_KEY || "";
+const UPLOAD_POST_API_KEY = process.env.UPLOAD_POST_API_KEY || "";
+const UPLOAD_POST_PROFILE = process.env.UPLOAD_POST_PROFILE || "";
 
-if (!AYRSHARE_API_KEY) {
-  throw new Error("Missing AYRSHARE_API_KEY environment variable");
+if (!UPLOAD_POST_API_KEY) {
+  throw new Error("Missing UPLOAD_POST_API_KEY environment variable");
 }
 
-const social = new SocialPost(AYRSHARE_API_KEY);
+if (!UPLOAD_POST_PROFILE) {
+  throw new Error(
+    "Missing UPLOAD_POST_PROFILE environment variable (your Upload-Post profile name)"
+  );
+}
 
-// Map our platform names to Ayrshare's platform identifiers
+const API_BASE = "https://api.upload-post.com/api";
+
+// Map our platform names to Upload-Post platform identifiers
 const PLATFORM_MAP: Record<string, string> = {
   instagram: "instagram",
   facebook: "facebook",
   pinterest: "pinterest",
-  x: "twitter", // Ayrshare still uses "twitter" internally
+  x: "x",
 };
 
 // Build the full post text with hashtags appended
-function buildPostText(post: SocialPostType): string {
+function buildPostText(post: SocialPost): string {
   let text = post.content;
 
   if (post.hashtags && post.hashtags.trim()) {
@@ -50,40 +56,62 @@ function buildPostText(post: SocialPostType): string {
   return text;
 }
 
-// Publish a single post via Ayrshare
-async function publishPost(post: SocialPostType): Promise<string> {
+// Make an authenticated request to Upload-Post API
+async function uploadPostRequest(
+  endpoint: string,
+  body: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Apikey ${UPLOAD_POST_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Upload-Post API error (${response.status}): ${errorText}`);
+  }
+
+  return (await response.json()) as Record<string, unknown>;
+}
+
+// Publish a single post via Upload-Post
+async function publishPost(post: SocialPost): Promise<string> {
   const platform = PLATFORM_MAP[post.platform];
   if (!platform) {
     throw new Error(`Unknown platform: ${post.platform}`);
   }
 
   const postText = buildPostText(post);
-  const imageUrl = post.image_url || `${PROPERTY.website}/images/${post.image_filename}`;
+  const imageUrl =
+    post.image_url || `${PROPERTY.website}/images/${post.image_filename}`;
 
   console.log(`Publishing to ${post.platform}...`);
   console.log(`  Text: ${postText.slice(0, 100)}...`);
   console.log(`  Image: ${imageUrl}`);
 
   try {
-    const response = await social.post({
-      post: postText,
-      platforms: [platform],
-      mediaUrls: [imageUrl],
+    // Upload-Post uses /upload_photos for image posts
+    const response = await uploadPostRequest("/upload_photos", {
+      user: UPLOAD_POST_PROFILE,
+      "platform[]": [platform],
+      title: postText,
+      media_url: imageUrl,
       // Pinterest-specific: set the destination link
       ...(post.platform === "pinterest" && {
-        pinterestOptions: {
-          link: PROPERTY.bookingUrl,
-          title: postText.slice(0, 100),
-        },
+        pinterest_board: PROPERTY.name,
+        pinterest_link: PROPERTY.bookingUrl,
       }),
     });
 
-    // Ayrshare returns an array of results, one per platform
-    const result = Array.isArray(response) ? response[0] : response;
-    const postId = result?.id || result?.postIds?.[0] || "unknown";
-
-    console.log(`  Published! Ayrshare ID: ${postId}`);
-    return String(postId);
+    const requestId = String(
+      response.request_id || response.id || "unknown"
+    );
+    console.log(`  Published! Upload-Post ID: ${requestId}`);
+    return requestId;
   } catch (err) {
     console.error(`  Failed to publish to ${post.platform}:`, err);
     throw err;
@@ -111,8 +139,8 @@ async function main() {
 
   for (const post of posts) {
     try {
-      const ayrshareId = await publishPost(post);
-      await markPublished(post.id!, ayrshareId);
+      const postId = await publishPost(post);
+      await markPublished(post.id!, postId);
       published++;
     } catch {
       console.error(`Failed to publish post ${post.id} to ${post.platform}`);

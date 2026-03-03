@@ -7,7 +7,7 @@ Automated social media posting and blog generation for Purgatory Townhouse.
 ```
 GitHub Actions (cron)
   ├── Daily 8am MT:  Generate 4 social posts (Claude API) → Supabase drafts
-  ├── 2x daily:      Publish approved posts → Ayrshare → Instagram/FB/Pinterest/X
+  ├── 2x daily:      Publish approved posts → Upload-Post → Instagram/FB/Pinterest/X
   └── Weekly Monday:  Generate blog post (Claude API) → Supabase draft
 ```
 
@@ -22,17 +22,18 @@ You need business/creator accounts on each platform:
 - [ ] **Pinterest**: Create a Pinterest Business account at business.pinterest.com
 - [ ] **X (Twitter)**: Create an account (standard account works)
 
-### Step 2: Sign Up for Ayrshare
+### Step 2: Sign Up for Upload-Post
 
-1. Go to [ayrshare.com](https://www.ayrshare.com) and create an account
-2. Choose the **Premium** plan ($49/month) — this covers all 4 platforms
-3. In the Ayrshare dashboard, connect each social media account:
-   - Click "Link Accounts"
+1. Go to [upload-post.com](https://www.upload-post.com) and create an account
+2. Choose the **Basic** plan ($16/month) — unlimited uploads, 5 profiles
+3. In the Upload-Post dashboard, create a **Profile** (e.g., "purgatory-townhouse")
+4. Connect each social media account through the dashboard:
    - Authorize Instagram (requires your Facebook Page to be linked)
    - Authorize Facebook Page
    - Authorize Pinterest Business
-   - Authorize X/Twitter
-4. Go to Dashboard → API Key and copy your API key
+   - Authorize X
+5. Go to your dashboard and generate an **API Key**
+6. Note your **Profile name** — you'll need it as `UPLOAD_POST_PROFILE`
 
 ### Step 3: Get an Anthropic API Key
 
@@ -53,14 +54,15 @@ You need business/creator accounts on each platform:
 
 Go to your GitHub repo → Settings → Secrets and variables → Actions → New repository secret
 
-Add these 4 secrets:
+Add these 5 secrets:
 
 | Secret Name | Value |
 |---|---|
 | `ANTHROPIC_API_KEY` | Your Anthropic API key |
 | `SUPABASE_URL` | Your Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Your Supabase service role key |
-| `AYRSHARE_API_KEY` | Your Ayrshare API key |
+| `UPLOAD_POST_API_KEY` | Your Upload-Post API key |
+| `UPLOAD_POST_PROFILE` | Your Upload-Post profile name |
 
 ### Step 6: Test Locally
 
@@ -97,18 +99,18 @@ You can also trigger any workflow manually from the GitHub Actions tab.
 ## Daily Workflow
 
 1. **Morning**: GitHub Actions generates 4 draft posts (Instagram, Facebook, Pinterest, X)
-2. **You review**: Either run `npm run review` locally, or check the `social_posts` table in Supabase dashboard and flip status from `draft` to `approved`
+2. **You review**: Check the admin dashboard at skipurgatoryhouse.com/admin → Social Queue to approve/reject/edit posts
 3. **Auto-publish**: The publish workflow picks up approved posts at 10am and 4pm MT
 
 ## Cost Breakdown
 
 | Service | Monthly Cost |
 |---|---|
-| Ayrshare Premium | $49 |
+| Upload-Post Basic | $16 |
 | Anthropic API (~30 social runs + 4 blog posts) | ~$3-5 |
 | GitHub Actions | Free |
 | Supabase (existing project) | $0 |
-| **Total** | **~$52-54/month** |
+| **Total** | **~$19-21/month** |
 
 ## File Reference
 
@@ -119,7 +121,7 @@ marketing/
 │   ├── supabase.ts            # Database helpers for content queue
 │   ├── generate-content.ts    # Daily social media post generator
 │   ├── generate-blog.ts       # Weekly blog post generator
-│   ├── publish-approved.ts    # Ayrshare publisher for approved posts
+│   ├── publish-approved.ts    # Upload-Post publisher for approved posts
 │   └── review-queue.ts        # CLI tool to review/approve drafts
 ├── supabase-migration.sql     # Database tables for content queue
 ├── .env.example               # Environment variable template

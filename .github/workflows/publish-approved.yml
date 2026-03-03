@@ -2,7 +2,7 @@
 # Publish Approved Social Media Posts
 # ============================================================
 # Runs twice daily at 10am and 4pm Mountain Time
-# Checks Supabase for approved posts and publishes via Ayrshare
+# Checks Supabase for approved posts and publishes via Upload-Post
 # ============================================================
 
 name: Publish Approved Posts
@@ -37,6 +37,7 @@ jobs:
       - name: Publish approved posts
         run: npm run publish
         env:
-          AYRSHARE_API_KEY: ${{ secrets.AYRSHARE_API_KEY }}
+          UPLOAD_POST_API_KEY: ${{ secrets.UPLOAD_POST_API_KEY }}
+          UPLOAD_POST_PROFILE: ${{ secrets.UPLOAD_POST_PROFILE }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

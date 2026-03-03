@@ -52,13 +52,13 @@ export async function getApprovedPosts(): Promise<SocialPost[]> {
   return data || [];
 }
 
-export async function markPublished(id: string, ayrsharePostId: string) {
+export async function markPublished(id: string, externalPostId: string) {
   const { error } = await supabase
     .from("social_posts")
     .update({
       status: "published",
       published_at: new Date().toISOString(),
-      ayrshare_post_id: ayrsharePostId,
+      ayrshare_post_id: externalPostId, // column name kept for DB compat
     })
     .eq("id", id);
 
