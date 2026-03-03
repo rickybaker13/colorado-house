@@ -115,7 +115,7 @@ async function generatePosts(
   const photo = photos[0];
 
   const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-5-20241022",
+    model: "claude-sonnet-4-5-20250414",
     max_tokens: 2000,
     system: buildSystemPrompt(instructions),
     messages: [
