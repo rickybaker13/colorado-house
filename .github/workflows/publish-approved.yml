@@ -1,0 +1,42 @@
+# ============================================================
+# Publish Approved Social Media Posts
+# ============================================================
+# Runs twice daily at 10am and 4pm Mountain Time
+# Checks Supabase for approved posts and publishes via Ayrshare
+# ============================================================
+
+name: Publish Approved Posts
+
+on:
+  schedule:
+    # 10am MT = 5pm UTC (winter) / 4pm UTC (summer)
+    - cron: '0 17 * * *'
+    # 4pm MT = 11pm UTC (winter) / 10pm UTC (summer)
+    - cron: '0 23 * * *'
+  workflow_dispatch: # Allow manual triggers
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: marketing
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Publish approved posts
+        run: npm run publish
+        env:
+          AYRSHARE_API_KEY: ${{ secrets.AYRSHARE_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

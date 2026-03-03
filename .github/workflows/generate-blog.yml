@@ -1,0 +1,40 @@
+# ============================================================
+# Weekly Blog Post Generation
+# ============================================================
+# Runs every Monday at 9am Mountain Time
+# Generates a long-form blog post as a draft for review
+# ============================================================
+
+name: Generate Blog Post
+
+on:
+  schedule:
+    # 9am MT on Mondays = 4pm UTC Monday (winter)
+    - cron: '0 16 * * 1'
+  workflow_dispatch: # Allow manual triggers
+
+jobs:
+  generate-blog:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: marketing
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate blog post
+        run: npm run generate-blog
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

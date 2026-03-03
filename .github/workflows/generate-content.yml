@@ -1,0 +1,41 @@
+# ============================================================
+# Daily Social Media Content Generation
+# ============================================================
+# Runs every morning at 8am Mountain Time (3pm UTC)
+# Generates 4 social media posts (one per platform) as drafts
+# Posts go to Supabase queue for review before publishing
+# ============================================================
+
+name: Generate Social Media Content
+
+on:
+  schedule:
+    # 8am Mountain Time = 3pm UTC (winter) / 2pm UTC (summer)
+    - cron: '0 15 * * *'
+  workflow_dispatch: # Allow manual triggers
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: marketing
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate social media content
+        run: npm run generate
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

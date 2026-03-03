@@ -1,0 +1,22 @@
+{
+  "name": "purgatory-townhouse-marketing",
+  "version": "1.0.0",
+  "description": "Automated social media content generation and publishing for Purgatory Townhouse",
+  "type": "module",
+  "scripts": {
+    "generate": "tsx src/generate-content.ts",
+    "publish": "tsx src/publish-approved.ts",
+    "generate-blog": "tsx src/generate-blog.ts",
+    "review": "tsx src/review-queue.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0",
+    "@supabase/supabase-js": "^2.95.3",
+    "social-post-api": "^1.3.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0"
+  }
+}

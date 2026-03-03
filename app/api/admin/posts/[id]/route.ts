@@ -1,0 +1,66 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getServiceClient } from '@/lib/supabase'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
+
+async function verifyAdmin() {
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const adminEmail = process.env.ADMIN_EMAIL
+  if (!user || (adminEmail && user.email !== adminEmail)) {
+    throw new Error('Unauthorized')
+  }
+  return user
+}
+
+const ALLOWED_FIELDS: Record<string, string[]> = {
+  social_posts: ['status', 'content', 'hashtags', 'performance_notes'],
+  blog_posts: ['status', 'content', 'title', 'excerpt'],
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    await verifyAdmin()
+
+    const { id } = await params
+    const body = await request.json()
+    const table = request.nextUrl.searchParams.get('table') ?? 'social_posts'
+
+    const allowedFields = ALLOWED_FIELDS[table]
+    if (!allowedFields) {
+      return NextResponse.json({ error: `Unknown table: ${table}` }, { status: 400 })
+    }
+
+    const updates: Record<string, unknown> = {}
+    for (const field of allowedFields) {
+      if (field in body) {
+        updates[field] = body[field]
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'No valid fields provided' }, { status: 400 })
+    }
+
+    const serviceClient = getServiceClient()
+    const { data, error } = await serviceClient
+      .from(table)
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json(data, { status: 200 })
+  } catch (err) {
+    if (err instanceof Error && err.message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
