@@ -128,7 +128,7 @@ async function generateBlogPost(topic: (typeof EDITORIAL_CALENDAR)[number]) {
   const month = getCurrentMonth();
 
   const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-5-20250414",
+    model: "claude-sonnet-4-20250514",
     max_tokens: 4000,
     system: buildBlogSystemPrompt(),
     messages: [
