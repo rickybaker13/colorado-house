@@ -31,13 +31,16 @@ export async function middleware(request: NextRequest) {
 
   const isLoginPage = request.nextUrl.pathname === '/admin/login'
 
-  // Restrict to owner email if ADMIN_EMAIL is set
-  const adminEmail = process.env.ADMIN_EMAIL
-  if (user && adminEmail && user.email !== adminEmail) {
-    await supabase.auth.signOut()
-    const url = new URL('/admin/login', request.url)
-    url.searchParams.set('error', 'unauthorized')
-    return NextResponse.redirect(url)
+  // Restrict to allowed admin emails (comma-separated list)
+  const adminEmails = process.env.ADMIN_EMAIL
+  if (user && adminEmails) {
+    const allowed = adminEmails.split(',').map((e) => e.trim().toLowerCase())
+    if (!allowed.includes(user.email?.toLowerCase() || '')) {
+      await supabase.auth.signOut()
+      const url = new URL('/admin/login', request.url)
+      url.searchParams.set('error', 'unauthorized')
+      return NextResponse.redirect(url)
+    }
   }
 
   // Not logged in → redirect to login (except if already on login page)
