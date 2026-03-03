@@ -183,7 +183,7 @@ export default function QueueClient({ initialPosts }: Props) {
             backgroundColor: 'rgba(255,255,255,0.04)',
             border: selected.has(post.id) ? '1px solid rgba(196,149,106,0.45)' : '1px solid rgba(196,149,106,0.12)',
             borderRadius: '10px', padding: '16px', position: 'relative', transition: 'border-color 0.15s',
-            display: 'flex', flexDirection: 'column',
+            display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0,
           }}>
             <input type="checkbox" checked={selected.has(post.id)} onChange={() => toggleSelect(post.id)}
               style={{ position: 'absolute', top: '14px', right: '14px', accentColor: '#c4956a', width: '15px', height: '15px', cursor: 'pointer' }} />
@@ -193,7 +193,7 @@ export default function QueueClient({ initialPosts }: Props) {
               <StatusBadge status={post.status} />
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', flex: 1 }}>
+            <div style={{ display: 'flex', gap: '12px' }}>
               {post.image_filename && (
                 <img src={`/images/${post.image_filename}`} alt="" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0, backgroundColor: 'rgba(255,255,255,0.05)' }} />
               )}
