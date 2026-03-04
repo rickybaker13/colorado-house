@@ -49,6 +49,23 @@ function buildPostText(post: SocialPost): string {
   return text
 }
 
+function buildPinterestTitle(post: SocialPost): string {
+  const content = post.content.trim()
+  const sentenceEnd = content.search(/[.!?]/)
+  let title = sentenceEnd > 0 && sentenceEnd < 95
+    ? content.slice(0, sentenceEnd + 1)
+    : content.slice(0, 97)
+  if (title.length >= 97) {
+    const lastSpace = title.lastIndexOf(' ')
+    if (lastSpace > 50) {
+      title = title.slice(0, lastSpace) + '...'
+    } else {
+      title = title.slice(0, 97) + '...'
+    }
+  }
+  return title
+}
+
 async function downloadImage(url: string): Promise<{ blob: Blob; filename: string }> {
   const response = await fetch(url)
   if (!response.ok) {
@@ -110,12 +127,17 @@ export async function POST() {
         const formData = new FormData()
         formData.append('user', UPLOAD_POST_PROFILE)
         formData.append('platform[]', platform)
-        formData.append('title', postText)
         formData.append('photos[]', blob, filename)
 
         if (post.platform === 'pinterest') {
+          const pinTitle = buildPinterestTitle(post)
+          formData.append('title', pinTitle)
+          formData.append('pinterest_title', pinTitle)
+          formData.append('pinterest_description', postText)
           formData.append('pinterest_board_id', 'Purgatory Townhouse')
           formData.append('pinterest_link', `${WEBSITE}/booking`)
+        } else {
+          formData.append('title', postText)
         }
 
         const response = await fetch(`${API_BASE}/upload_photos`, {

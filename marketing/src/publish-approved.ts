@@ -56,6 +56,29 @@ function buildPostText(post: SocialPost): string {
   return text;
 }
 
+// Extract a short title for Pinterest (max 100 chars)
+// Uses the first sentence of the content, truncated if needed
+function buildPinterestTitle(post: SocialPost): string {
+  const content = post.content.trim();
+  // Try first sentence (period, exclamation, or question mark)
+  const sentenceEnd = content.search(/[.!?]/);
+  let title = sentenceEnd > 0 && sentenceEnd < 95
+    ? content.slice(0, sentenceEnd + 1)
+    : content.slice(0, 97);
+
+  // If we had to slice mid-word, back up to the last space
+  if (title.length >= 97) {
+    const lastSpace = title.lastIndexOf(" ");
+    if (lastSpace > 50) {
+      title = title.slice(0, lastSpace) + "...";
+    } else {
+      title = title.slice(0, 97) + "...";
+    }
+  }
+
+  return title;
+}
+
 // Download an image from a URL and return it as a Blob with filename
 async function downloadImage(url: string): Promise<{ blob: Blob; filename: string }> {
   const response = await fetch(url);
@@ -96,13 +119,19 @@ async function publishPost(post: SocialPost): Promise<string> {
     const formData = new FormData();
     formData.append("user", UPLOAD_POST_PROFILE);
     formData.append("platform[]", platform);
-    formData.append("title", postText);
     formData.append("photos[]", blob, filename);
 
-    // Pinterest-specific fields
     if (post.platform === "pinterest") {
+      // Pinterest has a 100-char title limit — use short title + full description
+      const pinTitle = buildPinterestTitle(post);
+      formData.append("title", pinTitle);
+      formData.append("pinterest_title", pinTitle);
+      formData.append("pinterest_description", postText);
       formData.append("pinterest_board_id", PROPERTY.name);
       formData.append("pinterest_link", PROPERTY.bookingUrl);
+      console.log(`  Pinterest title (${pinTitle.length} chars): ${pinTitle}`);
+    } else {
+      formData.append("title", postText);
     }
 
     const response = await fetch(`${API_BASE}/upload_photos`, {
