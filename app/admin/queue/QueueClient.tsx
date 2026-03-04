@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Instagram, Twitter, CheckCircle, XCircle, Pencil, X, ImageIcon } from 'lucide-react'
+import { Instagram, Twitter, CheckCircle, XCircle, Pencil, X, ImageIcon, Search, Upload } from 'lucide-react'
 
 interface SocialPost {
   id: string
@@ -111,6 +111,14 @@ export default function QueueClient({ initialPosts }: Props) {
   const [showImagePicker, setShowImagePicker] = useState(false)
   const [editImageUrl, setEditImageUrl] = useState('')
   const [saving, setSaving] = useState(false)
+  const [imageTab, setImageTab] = useState<'library' | 'pexels' | 'upload'>('library')
+  const [pexelsQuery, setPexelsQuery] = useState('')
+  const [pexelsResults, setPexelsResults] = useState<Array<{ id: number; alt: string; photographer: string; src: { medium: string; large2x: string } }>>([])
+  const [pexelsLoading, setPexelsLoading] = useState(false)
+  const [pexelsError, setPexelsError] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
+  const [showUrlInput, setShowUrlInput] = useState(false)
 
   const filtered = useMemo(() => {
     return posts.filter(p => {
@@ -140,6 +148,12 @@ export default function QueueClient({ initialPosts }: Props) {
     setEditImage(post.image_filename ?? '')
     setShowImagePicker(false)
     setEditImageUrl(post.image_url ?? '')
+    setImageTab('library')
+    setPexelsQuery('')
+    setPexelsResults([])
+    setPexelsError('')
+    setUploadError('')
+    setShowUrlInput(false)
   }
 
   async function saveEdit() {
@@ -154,6 +168,54 @@ export default function QueueClient({ initialPosts }: Props) {
     const ids = Array.from(selected)
     await Promise.all(ids.map(id => patchPost(id, { status })))
     setSelected(new Set())
+  }
+
+  async function searchPexels() {
+    if (!pexelsQuery.trim()) return
+    setPexelsLoading(true)
+    setPexelsError('')
+    try {
+      const res = await fetch(`/api/admin/images/search?q=${encodeURIComponent(pexelsQuery)}`)
+      if (!res.ok) throw new Error('Search failed')
+      const data = await res.json()
+      setPexelsResults(data.photos || [])
+    } catch {
+      setPexelsError('Failed to search Pexels. Check API key configuration.')
+    } finally {
+      setPexelsLoading(false)
+    }
+  }
+
+  function selectPexelsImage(photo: typeof pexelsResults[0]) {
+    setEditImageUrl(photo.src.large2x)
+    setEditImage('')
+    setShowImagePicker(false)
+  }
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setUploadError('')
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/admin/images/upload', { method: 'POST', body: formData })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Upload failed')
+      }
+      const data = await res.json()
+      setEditImageUrl(data.url)
+      setEditImage('')
+      setShowImagePicker(false)
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setUploading(false)
+      // Reset file input
+      e.target.value = ''
+    }
   }
 
   const tabBtnStyle = (active: boolean): React.CSSProperties => ({
@@ -262,43 +324,116 @@ export default function QueueClient({ initialPosts }: Props) {
             <div style={{ marginBottom: '14px' }}>
               <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginBottom: '6px' }}>Image</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                {editImage && (<img src={`/images/${editImage}`} alt="" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.05)' }} />)}
+                {(editImage || editImageUrl) && (<img src={editImageUrl || `/images/${editImage}`} alt="" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.05)' }} />)}
                 <div>
-                  <p style={{ margin: '0 0 6px', fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>{editImage || 'No image'}</p>
+                  <p style={{ margin: '0 0 6px', fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>{editImageUrl ? 'External image' : editImage || 'No image'}</p>
                   <button onClick={() => setShowImagePicker(!showImagePicker)}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 500, backgroundColor: 'rgba(196,149,106,0.1)', color: '#c4956a', border: '1px solid rgba(196,149,106,0.3)', cursor: 'pointer' }}>
-                    <ImageIcon size={12} /> {showImagePicker ? 'Hide Gallery' : 'Change Image'}
+                    <ImageIcon size={12} /> {showImagePicker ? 'Hide' : 'Change Image'}
                   </button>
                 </div>
               </div>
 
               {showImagePicker && (
-                <div style={{ marginTop: '12px', padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', maxHeight: '320px', overflow: 'auto' }}>
-                  {Object.entries(IMAGE_LIBRARY).map(([category, images]) => (
-                    <div key={category} style={{ marginBottom: '12px' }}>
-                      <p style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 6px' }}>{category}</p>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(64px, 1fr))', gap: '6px' }}>
-                        {images.map(img => (
-                          <img key={img} src={`/images/${img}`} alt={img} title={img}
-                            onClick={() => { setEditImage(img); setShowImagePicker(false) }}
-                            style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: '5px', cursor: 'pointer', border: editImage === img ? '2px solid #c4956a' : '2px solid transparent', opacity: editImage === img ? 1 : 0.7, transition: 'all 0.15s' }} />
-                        ))}
-                      </div>
+                <div style={{ marginTop: '12px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                  {/* Tab bar */}
+                  <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    {([['library', 'Library', ImageIcon], ['pexels', 'Pexels', Search], ['upload', 'Upload', Upload]] as const).map(([tab, label, Icon]) => (
+                      <button key={tab} onClick={() => setImageTab(tab as 'library' | 'pexels' | 'upload')}
+                        style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '10px 12px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', transition: 'all 0.15s', background: 'none', border: 'none', borderBottom: imageTab === tab ? '2px solid #c4956a' : '2px solid transparent', color: imageTab === tab ? '#c4956a' : 'rgba(255,255,255,0.4)' }}>
+                        <Icon size={13} /> {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Library tab */}
+                  {imageTab === 'library' && (
+                    <div style={{ padding: '12px', maxHeight: '280px', overflow: 'auto' }}>
+                      {Object.entries(IMAGE_LIBRARY).map(([category, images]) => (
+                        <div key={category} style={{ marginBottom: '12px' }}>
+                          <p style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 6px' }}>{category}</p>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(64px, 1fr))', gap: '6px' }}>
+                            {images.map(img => (
+                              <img key={img} src={`/images/${img}`} alt={img} title={img}
+                                onClick={() => { setEditImage(img); setEditImageUrl(''); setShowImagePicker(false) }}
+                                style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: '5px', cursor: 'pointer', border: editImage === img ? '2px solid #c4956a' : '2px solid transparent', opacity: editImage === img ? 1 : 0.7, transition: 'all 0.15s' }} />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
+
+                  {/* Pexels search tab */}
+                  {imageTab === 'pexels' && (
+                    <div style={{ padding: '12px' }}>
+                      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                        <input type="text" value={pexelsQuery} onChange={e => setPexelsQuery(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && searchPexels()}
+                          placeholder="Search Pexels (e.g. mountain winter snow)"
+                          style={{ flex: 1, padding: '8px 12px', borderRadius: '7px', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(196,149,106,0.25)', color: '#fafaf8', fontSize: '13px', outline: 'none' }} />
+                        <button onClick={searchPexels} disabled={pexelsLoading}
+                          style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 14px', borderRadius: '7px', fontSize: '12px', fontWeight: 500, backgroundColor: '#c4956a', color: '#1a1a2e', border: 'none', cursor: pexelsLoading ? 'wait' : 'pointer', opacity: pexelsLoading ? 0.6 : 1 }}>
+                          <Search size={13} /> {pexelsLoading ? 'Searching...' : 'Search'}
+                        </button>
+                      </div>
+                      {pexelsError && <p style={{ fontSize: '12px', color: '#f87171', margin: '0 0 8px' }}>{pexelsError}</p>}
+                      {pexelsResults.length > 0 && (
+                        <div style={{ maxHeight: '260px', overflow: 'auto' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '8px' }}>
+                            {pexelsResults.map(photo => (
+                              <div key={photo.id} onClick={() => selectPexelsImage(photo)}
+                                style={{ cursor: 'pointer', borderRadius: '6px', overflow: 'hidden', border: editImageUrl === photo.src.large2x ? '2px solid #c4956a' : '2px solid transparent', transition: 'all 0.15s' }}>
+                                <img src={photo.src.medium} alt={photo.alt} style={{ width: '100%', aspectRatio: '3/2', objectFit: 'cover', display: 'block' }} />
+                                <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', padding: '4px 6px', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  Photo by {photo.photographer}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {pexelsResults.length === 0 && !pexelsLoading && !pexelsError && (
+                        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: '24px 0' }}>
+                          Search for free stock photos from Pexels
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Upload tab */}
+                  {imageTab === 'upload' && (
+                    <div style={{ padding: '12px' }}>
+                      <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '32px 16px', borderRadius: '8px', border: '2px dashed rgba(196,149,106,0.3)', cursor: uploading ? 'wait' : 'pointer', transition: 'all 0.15s', backgroundColor: 'rgba(196,149,106,0.04)' }}>
+                        <Upload size={24} style={{ color: 'rgba(196,149,106,0.5)' }} />
+                        <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>
+                          {uploading ? 'Uploading...' : 'Click to choose a photo'}
+                        </span>
+                        <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.25)' }}>JPEG, PNG, WebP, GIF up to 4 MB</span>
+                        <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handleFileUpload}
+                          disabled={uploading} style={{ display: 'none' }} />
+                      </label>
+                      {uploadError && <p style={{ fontSize: '12px', color: '#f87171', margin: '8px 0 0' }}>{uploadError}</p>}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
             <div style={{ marginBottom: '14px' }}>
-              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginBottom: '6px' }}>External Image URL (overrides local image)</label>
-              <input
-                type="text"
-                value={editImageUrl}
-                onChange={e => setEditImageUrl(e.target.value)}
-                placeholder="https://images.pexels.com/..."
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '7px', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(196,149,106,0.25)', color: '#fafaf8', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
-              />
+              <button onClick={() => setShowUrlInput(!showUrlInput)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'rgba(255,255,255,0.3)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: showUrlInput ? '6px' : 0 }}>
+                {showUrlInput ? '▾' : '▸'} Paste URL manually
+              </button>
+              {showUrlInput && (
+                <input
+                  type="text"
+                  value={editImageUrl}
+                  onChange={e => { setEditImageUrl(e.target.value); if (e.target.value) setEditImage('') }}
+                  placeholder="https://images.pexels.com/..."
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: '7px', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(196,149,106,0.25)', color: '#fafaf8', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              )}
             </div>
 
             <div style={{ marginBottom: '14px' }}>
