@@ -328,12 +328,20 @@ Important:
       throw new Error("Claude returned no text in final response");
     }
 
-    // Parse the JSON response
+    // Parse the JSON response — Claude sometimes includes preamble text before JSON
     try {
-      const cleaned = textBlock.text
+      let cleaned = textBlock.text
         .replace(/```json?\n?/g, "")
         .replace(/```\n?/g, "")
         .trim();
+
+      // Extract JSON object if there's preamble text before it
+      const jsonStart = cleaned.indexOf("{");
+      const jsonEnd = cleaned.lastIndexOf("}");
+      if (jsonStart > 0 && jsonEnd > jsonStart) {
+        cleaned = cleaned.slice(jsonStart, jsonEnd + 1);
+      }
+
       const parsed = JSON.parse(cleaned) as Record<string, unknown>;
 
       // Extract image_url if present
