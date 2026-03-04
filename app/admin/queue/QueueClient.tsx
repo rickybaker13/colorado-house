@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Instagram, Twitter, CheckCircle, XCircle, Pencil, X, ImageIcon, Search, Upload } from 'lucide-react'
+import { Instagram, Twitter, CheckCircle, XCircle, Pencil, X, ImageIcon, Search, Upload, Send } from 'lucide-react'
 
 interface SocialPost {
   id: string
@@ -119,6 +119,8 @@ export default function QueueClient({ initialPosts }: Props) {
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const [showUrlInput, setShowUrlInput] = useState(false)
+  const [publishing, setPublishing] = useState(false)
+  const [publishResult, setPublishResult] = useState<{ published: number; failed: number; message?: string } | null>(null)
 
   const filtered = useMemo(() => {
     return posts.filter(p => {
@@ -218,6 +220,27 @@ export default function QueueClient({ initialPosts }: Props) {
     }
   }
 
+  const approvedCount = useMemo(() => posts.filter(p => p.status === 'approved').length, [posts])
+
+  async function publishNow() {
+    setPublishing(true)
+    setPublishResult(null)
+    try {
+      const res = await fetch('/api/admin/publish', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Publish failed')
+      setPublishResult(data)
+      // Refresh posts — mark published ones
+      if (data.published > 0) {
+        setPosts(curr => curr.map(p => p.status === 'approved' ? { ...p, status: 'published' } : p))
+      }
+    } catch (err) {
+      setPublishResult({ published: 0, failed: 1, message: err instanceof Error ? err.message : 'Publish failed' })
+    } finally {
+      setPublishing(false)
+    }
+  }
+
   const tabBtnStyle = (active: boolean): React.CSSProperties => ({
     padding: '6px 14px', borderRadius: '6px', fontSize: '13px', fontWeight: 500,
     border: active ? '1px solid rgba(196,149,106,0.4)' : '1px solid rgba(255,255,255,0.08)',
@@ -232,8 +255,23 @@ export default function QueueClient({ initialPosts }: Props) {
 
   return (
     <div>
-      <h1 className="font-display" style={{ fontSize: '32px', fontWeight: 300, color: '#fafaf8', margin: '0 0 8px' }}>Social Queue</h1>
-      <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px', marginBottom: '24px' }}>{filtered.length} post{filtered.length !== 1 ? 's' : ''} pending</p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <h1 className="font-display" style={{ fontSize: '32px', fontWeight: 300, color: '#fafaf8', margin: '0 0 8px' }}>Social Queue</h1>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px', margin: 0 }}>{filtered.length} post{filtered.length !== 1 ? 's' : ''} pending</p>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+          <button onClick={publishNow} disabled={publishing || approvedCount === 0}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 20px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, border: 'none', cursor: publishing || approvedCount === 0 ? 'not-allowed' : 'pointer', backgroundColor: approvedCount > 0 ? '#c4956a' : 'rgba(196,149,106,0.3)', color: approvedCount > 0 ? '#1a1a2e' : 'rgba(26,26,46,0.5)', transition: 'all 0.15s', opacity: publishing ? 0.6 : 1 }}>
+            <Send size={14} /> {publishing ? 'Publishing...' : `Publish Now${approvedCount > 0 ? ` (${approvedCount})` : ''}`}
+          </button>
+          {publishResult && (
+            <p style={{ fontSize: '12px', margin: 0, color: publishResult.failed > 0 ? '#f87171' : '#4ade80' }}>
+              {publishResult.message || `${publishResult.published} published${publishResult.failed > 0 ? `, ${publishResult.failed} failed` : ''}`}
+            </p>
+          )}
+        </div>
+      </div>
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '24px', alignItems: 'center' }}>
