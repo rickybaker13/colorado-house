@@ -36,6 +36,7 @@ export default function Footer() {
                 { href: '/hiking', label: 'Alpine Trails' },
                 { href: '/alpine-lakes', label: 'Lakes' },
                 { href: '/durango', label: 'Durango' },
+                { href: '/blog', label: 'Stories' },
               ].map((link) => (
                 <li key={link.href}>
                   <Link

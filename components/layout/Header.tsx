@@ -28,6 +28,7 @@ export default function Header() {
     { href: '/hiking', label: 'Trails' },
     { href: '/alpine-lakes', label: 'Lakes' },
     { href: '/durango', label: 'Durango' },
+    { href: '/blog', label: 'Stories' },
   ];
 
   return (
