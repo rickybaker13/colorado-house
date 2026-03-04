@@ -56,29 +56,22 @@ function buildPostText(post: SocialPost): string {
   return text;
 }
 
-// Make an authenticated request to Upload-Post API
-async function uploadPostRequest(
-  endpoint: string,
-  body: Record<string, unknown>
-): Promise<Record<string, unknown>> {
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Apikey ${UPLOAD_POST_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-
+// Download an image from a URL and return it as a Blob with filename
+async function downloadImage(url: string): Promise<{ blob: Blob; filename: string }> {
+  const response = await fetch(url);
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Upload-Post API error (${response.status}): ${errorText}`);
+    throw new Error(`Failed to download image: HTTP ${response.status} from ${url}`);
   }
 
-  return (await response.json()) as Record<string, unknown>;
+  const contentType = response.headers.get("content-type") || "image/jpeg";
+  const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
+  const blob = await response.blob();
+  const filename = `post-image.${ext}`;
+
+  return { blob, filename };
 }
 
-// Publish a single post via Upload-Post
+// Publish a single post via Upload-Post using multipart/form-data
 async function publishPost(post: SocialPost): Promise<string> {
   const platform = PLATFORM_MAP[post.platform];
   if (!platform) {
@@ -94,22 +87,40 @@ async function publishPost(post: SocialPost): Promise<string> {
   console.log(`  Image: ${imageUrl}`);
 
   try {
-    // Upload-Post uses /upload_photos for image posts
-    const response = await uploadPostRequest("/upload_photos", {
-      user: UPLOAD_POST_PROFILE,
-      "platform[]": [platform],
-      title: postText,
-      media_url: imageUrl,
-      // Pinterest-specific: set the destination link
-      ...(post.platform === "pinterest" && {
-        pinterest_board: PROPERTY.name,
-        pinterest_link: PROPERTY.bookingUrl,
-      }),
+    // Download the image first (Upload-Post requires binary file upload)
+    console.log(`  Downloading image...`);
+    const { blob, filename } = await downloadImage(imageUrl);
+    console.log(`  Downloaded ${(blob.size / 1024).toFixed(0)} KB`);
+
+    // Build multipart form data
+    const formData = new FormData();
+    formData.append("user", UPLOAD_POST_PROFILE);
+    formData.append("platform[]", platform);
+    formData.append("title", postText);
+    formData.append("photos[]", blob, filename);
+
+    // Pinterest-specific fields
+    if (post.platform === "pinterest") {
+      formData.append("pinterest_board_id", PROPERTY.name);
+      formData.append("pinterest_link", PROPERTY.bookingUrl);
+    }
+
+    const response = await fetch(`${API_BASE}/upload_photos`, {
+      method: "POST",
+      headers: {
+        Authorization: `Apikey ${UPLOAD_POST_API_KEY}`,
+        // No Content-Type header — fetch sets it automatically for FormData
+      },
+      body: formData,
     });
 
-    const requestId = String(
-      response.request_id || response.id || "unknown"
-    );
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Upload-Post API error (${response.status}): ${errorText}`);
+    }
+
+    const result = (await response.json()) as Record<string, unknown>;
+    const requestId = String(result.request_id || result.id || "unknown");
     console.log(`  Published! Upload-Post ID: ${requestId}`);
     return requestId;
   } catch (err) {
