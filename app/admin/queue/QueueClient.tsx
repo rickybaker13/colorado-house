@@ -10,6 +10,7 @@ interface SocialPost {
   hashtags?: string
   content_theme?: string
   image_filename?: string
+  image_url?: string
   status: string
   created_at: string
 }
@@ -42,6 +43,15 @@ const IMAGE_LIBRARY: Record<string, string[]> = {
     'kitchen-3.jpg', 'bedroom-master-1.jpg', 'bedroom-guest-1.jpg', 'bedroom-guest-2.jpg',
     'bathroom-1.jpg', 'bathroom-2.jpg', 'dining-1.jpg', 'detail-1.jpg',
     'detail-2.jpg', 'detail-3.jpg', 'laundry.jpg',
+    'file_35---8442826e-0583-4f7c-8519-ddf80feb638a.jpg',
+    'file_36---0040c3ea-93a5-4919-8017-c6349fa8f70d.jpg',
+    'file_37---99ef673a-f1cd-450c-8e00-2fac70252c2c.jpg',
+    'file_38---159a7a4b-5b0e-4282-8223-ef152a20542c.jpg',
+    'file_39---83886c87-e830-474b-bcc7-f810d9e19bf2.jpg',
+    'file_40---2402f62f-b03c-4a90-892d-2689435e9ac4.jpg',
+    'file_41---abcefd98-23fb-43a9-91a3-e43ed9b30e63.jpg',
+    'file_42---4c9e886f-4807-486a-acf3-5e0d1c74b5da.jpg',
+    'file_43---5eae66d5-bfbe-41da-a496-c720416e2eed.jpg',
   ],
   'Durango & Attractions': [
     'durango-downtown-main.jpg', 'durango-downtown-winter.jpg',
@@ -99,6 +109,7 @@ export default function QueueClient({ initialPosts }: Props) {
   const [editHashtags, setEditHashtags] = useState('')
   const [editImage, setEditImage] = useState('')
   const [showImagePicker, setShowImagePicker] = useState(false)
+  const [editImageUrl, setEditImageUrl] = useState('')
   const [saving, setSaving] = useState(false)
 
   const filtered = useMemo(() => {
@@ -128,12 +139,13 @@ export default function QueueClient({ initialPosts }: Props) {
     setEditHashtags(post.hashtags ?? '')
     setEditImage(post.image_filename ?? '')
     setShowImagePicker(false)
+    setEditImageUrl(post.image_url ?? '')
   }
 
   async function saveEdit() {
     if (!editingId) return
     setSaving(true)
-    await patchPost(editingId, { content: editContent, hashtags: editHashtags, image_filename: editImage })
+    await patchPost(editingId, { content: editContent, hashtags: editHashtags, image_filename: editImage, image_url: editImageUrl || undefined })
     setSaving(false)
     setEditingId(null)
   }
@@ -194,8 +206,8 @@ export default function QueueClient({ initialPosts }: Props) {
             </div>
 
             <div style={{ display: 'flex', gap: '12px' }}>
-              {post.image_filename && (
-                <img src={`/images/${post.image_filename}`} alt="" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0, backgroundColor: 'rgba(255,255,255,0.05)' }} />
+              {(post.image_filename || post.image_url) && (
+                <img src={post.image_url || `/images/${post.image_filename}`} alt="" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0, backgroundColor: 'rgba(255,255,255,0.05)' }} />
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', margin: '0 0 8px', lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{post.content}</p>
@@ -276,6 +288,17 @@ export default function QueueClient({ initialPosts }: Props) {
                   ))}
                 </div>
               )}
+            </div>
+
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginBottom: '6px' }}>External Image URL (overrides local image)</label>
+              <input
+                type="text"
+                value={editImageUrl}
+                onChange={e => setEditImageUrl(e.target.value)}
+                placeholder="https://images.pexels.com/..."
+                style={{ width: '100%', padding: '9px 12px', borderRadius: '7px', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(196,149,106,0.25)', color: '#fafaf8', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+              />
             </div>
 
             <div style={{ marginBottom: '14px' }}>

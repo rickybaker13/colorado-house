@@ -17,7 +17,7 @@ async function verifyAdmin() {
 }
 
 const ALLOWED_FIELDS: Record<string, string[]> = {
-  social_posts: ['status', 'content', 'hashtags', 'image_filename', 'performance_notes'],
+  social_posts: ['status', 'content', 'hashtags', 'image_filename', 'image_url', 'performance_notes'],
   blog_posts: ['status', 'content', 'title', 'excerpt'],
 }
 
