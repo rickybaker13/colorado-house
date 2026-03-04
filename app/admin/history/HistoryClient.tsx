@@ -1,14 +1,17 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Instagram, Twitter } from 'lucide-react'
+import { Instagram, Twitter, RefreshCw } from 'lucide-react'
 
 interface SocialPost {
   id: string
   platform: string
   content: string
+  hashtags?: string | null
+  image_filename?: string | null
+  image_url?: string | null
   published_at: string | null
-  ayrshare_id?: string | null
+  ayrshare_post_id?: string | null
   performance_notes?: string | null
 }
 
@@ -25,7 +28,7 @@ interface Props {
 }
 
 function formatDate(dateStr: string | null) {
-  if (!dateStr) return '—'
+  if (!dateStr) return '\u2014'
   return new Date(dateStr).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -182,6 +185,31 @@ function PerformanceNotesCell({
 
 export default function HistoryClient({ socialPosts, blogPosts }: Props) {
   const [activeTab, setActiveTab] = useState<'social' | 'blog'>('social')
+  const [reposting, setReposting] = useState<Record<string, boolean>>({})
+  const [repostResult, setRepostResult] = useState<Record<string, { success: boolean; message: string }>>({})
+
+  async function handleRepost(post: SocialPost) {
+    setReposting(prev => ({ ...prev, [post.id]: true }))
+    setRepostResult(prev => { const n = { ...prev }; delete n[post.id]; return n })
+
+    try {
+      const res = await fetch('/api/admin/repost', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: post.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setRepostResult(prev => ({ ...prev, [post.id]: { success: false, message: data.error || 'Repost failed' } }))
+      } else {
+        setRepostResult(prev => ({ ...prev, [post.id]: { success: true, message: 'Reposted!' } }))
+      }
+    } catch {
+      setRepostResult(prev => ({ ...prev, [post.id]: { success: false, message: 'Network error' } }))
+    } finally {
+      setReposting(prev => ({ ...prev, [post.id]: false }))
+    }
+  }
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
     padding: '8px 20px',
@@ -251,7 +279,7 @@ export default function HistoryClient({ socialPosts, blogPosts }: Props) {
               {/* Table header */}
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: '120px 1fr 130px 160px 200px',
+                gridTemplateColumns: '100px 1fr 110px 80px 180px',
                 gap: '0',
                 padding: '10px 16px',
                 borderBottom: '1px solid rgba(255,255,255,0.07)',
@@ -259,7 +287,7 @@ export default function HistoryClient({ socialPosts, blogPosts }: Props) {
               }}
                 className="history-table-header"
               >
-                {['Platform', 'Content', 'Published', 'Ayrshare ID', 'Performance Notes'].map(col => (
+                {['Platform', 'Content', 'Published', 'Repost', 'Performance Notes'].map(col => (
                   <span key={col} style={{
                     fontSize: '11px',
                     fontWeight: 600,
@@ -278,7 +306,7 @@ export default function HistoryClient({ socialPosts, blogPosts }: Props) {
                   key={post.id}
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: '120px 1fr 130px 160px 200px',
+                    gridTemplateColumns: '100px 1fr 110px 80px 180px',
                     gap: '0',
                     padding: '12px 16px',
                     alignItems: 'center',
@@ -304,7 +332,7 @@ export default function HistoryClient({ socialPosts, blogPosts }: Props) {
                       whiteSpace: 'nowrap',
                     }}>
                       {post.content?.slice(0, 100) ?? ''}
-                      {(post.content?.length ?? 0) > 100 ? '…' : ''}
+                      {(post.content?.length ?? 0) > 100 ? '\u2026' : ''}
                     </p>
                   </div>
                   <div>
@@ -312,21 +340,37 @@ export default function HistoryClient({ socialPosts, blogPosts }: Props) {
                       {formatDate(post.published_at)}
                     </span>
                   </div>
-                  <div style={{ paddingRight: '12px' }}>
-                    {post.ayrshare_id ? (
+                  <div>
+                    {repostResult[post.id] ? (
                       <span style={{
                         fontSize: '11px',
-                        color: 'rgba(255,255,255,0.25)',
-                        fontFamily: 'ui-monospace, monospace',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        display: 'block',
+                        color: repostResult[post.id].success ? '#4ade80' : '#f87171',
                       }}>
-                        {post.ayrshare_id}
+                        {repostResult[post.id].message}
                       </span>
                     ) : (
-                      <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.2)' }}>—</span>
+                      <button
+                        onClick={() => handleRepost(post)}
+                        disabled={reposting[post.id]}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '4px 10px',
+                          borderRadius: '5px',
+                          fontSize: '11px',
+                          fontWeight: 500,
+                          border: '1px solid rgba(196,149,106,0.3)',
+                          backgroundColor: reposting[post.id] ? 'rgba(196,149,106,0.15)' : 'rgba(196,149,106,0.08)',
+                          color: '#c4956a',
+                          cursor: reposting[post.id] ? 'wait' : 'pointer',
+                          transition: 'all 0.15s',
+                          opacity: reposting[post.id] ? 0.6 : 1,
+                        }}
+                      >
+                        <RefreshCw size={10} style={reposting[post.id] ? { animation: 'spin 1s linear infinite' } : {}} />
+                        {reposting[post.id] ? '...' : 'Repost'}
+                      </button>
                     )}
                   </div>
                   <div>
@@ -398,14 +442,18 @@ export default function HistoryClient({ socialPosts, blogPosts }: Props) {
       )}
 
       <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
         @media (max-width: 900px) {
           .history-table-header,
           .history-table-row {
-            grid-template-columns: 100px 1fr 110px !important;
+            grid-template-columns: 100px 1fr 80px !important;
           }
-          .history-table-header > span:nth-child(4),
+          .history-table-header > span:nth-child(3),
+          .history-table-row > div:nth-child(3),
           .history-table-header > span:nth-child(5),
-          .history-table-row > div:nth-child(4),
           .history-table-row > div:nth-child(5) {
             display: none !important;
           }

@@ -10,7 +10,7 @@ export default async function HistoryPage() {
   ] = await Promise.all([
     supabase
       .from('social_posts')
-      .select('id, platform, content, published_at, ayrshare_id, performance_notes')
+      .select('id, platform, content, hashtags, image_filename, image_url, published_at, ayrshare_post_id, performance_notes')
       .eq('status', 'published')
       .order('published_at', { ascending: false })
       .limit(100),
