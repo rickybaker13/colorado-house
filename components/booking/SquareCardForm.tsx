@@ -46,8 +46,8 @@ const SQUARE_LOCATION_ID = process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID || '';
 
 // Determine SDK URL based on app ID prefix (sandbox IDs start with "sandbox-")
 const SQUARE_SDK_URL = SQUARE_APP_ID.startsWith('sandbox-')
-  ? 'https://sandbox.web.squareup.com/v1/square.js'
-  : 'https://web.squareup.com/v1/square.js';
+  ? 'https://sandbox.web.squarecdn.com/v1/square.js'
+  : 'https://web.squarecdn.com/v1/square.js';
 
 /* ─────────────────────── component ─────────────────────── */
 
