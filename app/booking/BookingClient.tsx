@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft,
@@ -24,6 +24,7 @@ import {
   AlertCircle,
   X,
 } from 'lucide-react';
+import SquareCardForm, { type SquareCardFormHandle } from '@/components/booking/SquareCardForm';
 
 /* ─────────────────────── types ─────────────────────── */
 
@@ -102,7 +103,7 @@ const DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 const AIRBNB_SERVICE_FEE_RATE = 0.14;
 
 const PAYMENT_METHODS: PaymentMethod[] = [
-  { id: 'credit_card', label: 'Credit / Debit Card', note: 'Secure Stripe payment link sent after confirmation', address: '' },
+  { id: 'credit_card', label: 'Credit / Debit Card', note: '50% deposit charged securely via Square', address: '' },
   { id: 'bitcoin', label: 'Bitcoin', badge: 'SAVE 15%', address: 'bc1q_YOUR_BTC_ADDRESS_HERE' },
   {
     id: 'stablecoin',
@@ -192,11 +193,15 @@ export default function BookingClient() {
   const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
 
+  /* ── square card ref ── */
+  const squareCardRef = useRef<SquareCardFormHandle>(null);
+
   /* ── submit state ── */
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [bookingId, setBookingId] = useState<string | null>(null);
+  const [depositPaid, setDepositPaid] = useState<number | null>(null);
 
   /* ── fetch data ── */
   useEffect(() => {
@@ -308,8 +313,55 @@ export default function BookingClient() {
 
     const selectedMethod = PAYMENT_METHODS.find(p => p.id === paymentMethod);
     const isBtc = paymentMethod === 'bitcoin';
+    const isCard = paymentMethod === 'credit_card';
+    const finalTotal = isBtc ? btcTotal : subtotal;
 
     try {
+      let squarePaymentId: string | null = null;
+      let depositAmount = 0;
+
+      // For credit card: tokenize and charge 50% deposit via Square
+      if (isCard) {
+        if (!squareCardRef.current) {
+          setSubmitError('Card form is not ready. Please wait a moment and try again.');
+          setSubmitting(false);
+          return;
+        }
+
+        // Tokenize the card
+        const tokenResult = await squareCardRef.current.tokenize();
+        if ('error' in tokenResult) {
+          setSubmitError(tokenResult.error);
+          setSubmitting(false);
+          return;
+        }
+
+        // Process payment (50% deposit)
+        const paymentRes = await fetch('/api/payments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sourceId: tokenResult.token,
+            amount: finalTotal,
+            guestName: name.trim(),
+            guestEmail: email.trim(),
+            checkIn: fmt(checkIn),
+            checkOut: fmt(checkOut),
+          }),
+        });
+        const paymentData = await paymentRes.json();
+
+        if (!paymentRes.ok || !paymentData.success) {
+          setSubmitError(paymentData.error || 'Payment failed. Please try again.');
+          setSubmitting(false);
+          return;
+        }
+
+        squarePaymentId = paymentData.paymentId;
+        depositAmount = paymentData.depositAmount;
+      }
+
+      // Create booking record
       const res = await fetch('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -327,8 +379,13 @@ export default function BookingClient() {
           pet_fee: petFee,
           subtotal,
           btc_discount: isBtc ? btcDiscount : 0,
-          final_total: isBtc ? btcTotal : subtotal,
+          final_total: finalTotal,
           payment_method: selectedMethod?.label.toLowerCase() ?? paymentMethod,
+          // Square payment fields (only present for card payments)
+          ...(squarePaymentId && {
+            square_payment_id: squarePaymentId,
+            deposit_amount: depositAmount,
+          }),
         }),
       });
       const data = await res.json();
@@ -338,6 +395,7 @@ export default function BookingClient() {
         return;
       }
       setBookingId(data.bookingId);
+      if (depositAmount > 0) setDepositPaid(depositAmount);
       setSubmitted(true);
     } catch {
       setSubmitError('Network error. Please try again.');
@@ -409,8 +467,14 @@ export default function BookingClient() {
             <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-6">
               <CheckCircle2 size={40} className="text-green-400" />
             </div>
-            <h1 className="font-display text-display-md text-snow mb-4">Booking Request Received</h1>
-            <p className="font-sans text-body-lg text-white/60 mb-10">We&apos;ll confirm availability and send payment instructions shortly.</p>
+            <h1 className="font-display text-display-md text-snow mb-4">
+              {depositPaid ? 'Booking Confirmed' : 'Booking Request Received'}
+            </h1>
+            <p className="font-sans text-body-lg text-white/60 mb-10">
+              {depositPaid
+                ? `Your 50% deposit of $${depositPaid.toLocaleString()} has been charged. We'll be in touch with check-in details!`
+                : "We'll confirm availability and send payment instructions shortly."}
+            </p>
 
             <div className="bg-charcoal-light rounded-2xl p-8 text-left space-y-4 border border-white/5">
               <div className="flex justify-between text-sm font-sans">
@@ -437,6 +501,18 @@ export default function BookingClient() {
                 <span className="font-sans font-medium text-snow">Total</span>
                 <span className="font-sans font-semibold text-stone text-lg">${paymentMethod === 'bitcoin' ? btcTotal.toLocaleString() : subtotal.toLocaleString()}</span>
               </div>
+              {depositPaid && (
+                <>
+                  <div className="flex justify-between text-sm font-sans">
+                    <span className="text-green-400 font-medium">Deposit Paid</span>
+                    <span className="text-green-400 font-medium">${depositPaid.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-sans">
+                    <span className="text-white/50">Remaining (due 30 days before check-in)</span>
+                    <span className="text-snow">${((paymentMethod === 'bitcoin' ? btcTotal : subtotal) - depositPaid).toLocaleString()}</span>
+                  </div>
+                </>
+              )}
             </div>
 
             <p className="text-sm text-white/40 mt-6 font-sans">A confirmation email will be sent to {email}</p>
@@ -544,7 +620,12 @@ export default function BookingClient() {
                           )}
                         </button>
                         <AnimatePresence>
-                          {sel && pm.address && !pm.chains && (
+                          {sel && pm.id === 'credit_card' && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
+                              <SquareCardForm ref={squareCardRef} disabled={submitting} />
+                            </motion.div>
+                          )}
+                          {sel && pm.address && !pm.chains && pm.id !== 'credit_card' && (
                             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
                               <div className="flex items-center gap-2 mt-2 ml-12 px-4 py-2.5 bg-white/5 rounded-lg">
                                 <code className="text-xs font-mono text-stone-light break-all flex-1">{pm.address}</code>
@@ -613,7 +694,9 @@ export default function BookingClient() {
                   disabled={!canSubmit}
                   className="w-full py-4 rounded-full bg-stone text-charcoal font-sans font-semibold text-sm uppercase tracking-wider transition-all duration-300 hover:bg-stone-light disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {submitting ? <><Loader2 size={18} className="animate-spin" /> Submitting&hellip;</> : 'Request Booking'}
+                  {submitting
+                    ? <><Loader2 size={18} className="animate-spin" /> {paymentMethod === 'credit_card' ? 'Processing Payment\u2026' : 'Submitting\u2026'}</>
+                    : paymentMethod === 'credit_card' ? 'Pay Deposit & Book' : 'Request Booking'}
                 </button>
               </div>
             </div>
@@ -692,9 +775,15 @@ export default function BookingClient() {
                     disabled={!canSubmit}
                     className="w-full py-4 rounded-full bg-stone text-charcoal font-sans font-semibold text-sm uppercase tracking-wider transition-all duration-300 hover:bg-stone-light disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    {submitting ? <><Loader2 size={18} className="animate-spin" /> Submitting&hellip;</> : 'Request Booking'}
+                    {submitting
+                      ? <><Loader2 size={18} className="animate-spin" /> {paymentMethod === 'credit_card' ? 'Processing Payment\u2026' : 'Submitting\u2026'}</>
+                      : paymentMethod === 'credit_card' ? 'Pay Deposit & Book' : 'Request Booking'}
                   </button>
-                  <p className="text-[11px] text-white/25 text-center font-sans">No charge today &mdash; we&apos;ll confirm availability first</p>
+                  <p className="text-[11px] text-white/25 text-center font-sans">
+                    {paymentMethod === 'credit_card'
+                      ? 'Your card will be charged 50% now as a deposit'
+                      : 'No charge today \u2014 we\u0027ll confirm availability first'}
+                  </p>
                 </div>
 
                 {/* Selected dates summary */}

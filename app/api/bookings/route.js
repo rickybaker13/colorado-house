@@ -13,8 +13,10 @@ async function sendTelegramNotification(booking) {
     (new Date(booking.check_out) - new Date(booking.check_in)) /
     (1000 * 60 * 60 * 24);
 
+  const isDepositPaid = booking.square_payment_id && booking.deposit_amount > 0;
+
   const message = `
-🏔️ *NEW BOOKING REQUEST*
+🏔️ *${isDepositPaid ? "CONFIRMED BOOKING (Deposit Paid)" : "NEW BOOKING REQUEST"}*
 
 👤 *Guest:* ${booking.guest_name}
 📧 *Email:* ${booking.guest_email}
@@ -32,10 +34,11 @@ async function sendTelegramNotification(booking) {
 ${booking.btc_discount > 0 ? `₿ *BTC Discount:* -$${booking.btc_discount}\n` : ""}💵 *Final Total:* $${booking.final_total}
 
 💳 *Payment Method:* ${booking.payment_method}
+${isDepositPaid ? `✅ *Deposit Paid:* $${booking.deposit_amount} (50% via Square)\n🆔 *Square ID:* ${booking.square_payment_id}` : ""}
 
 ${booking.guest_message ? `💬 *Message:* ${booking.guest_message}` : ""}
 
-⏳ Status: Awaiting your confirmation
+${isDepositPaid ? "✅ Confirmed — deposit received" : "⏳ Status: Awaiting your confirmation"}
   `.trim();
 
   try {
@@ -109,6 +112,9 @@ export async function POST(request) {
       );
     }
 
+    // If a Square payment ID is present, the deposit has been paid — auto-confirm
+    const hasSquarePayment = body.square_payment_id && body.deposit_amount > 0;
+
     const { data: booking, error } = await supabase
       .from("bookings")
       .insert({
@@ -127,8 +133,10 @@ export async function POST(request) {
         btc_discount: body.btc_discount || 0,
         final_total: body.final_total,
         payment_method: body.payment_method,
-        status: "requested",
-        payment_status: "pending",
+        status: hasSquarePayment ? "confirmed" : "requested",
+        payment_status: hasSquarePayment ? "deposit_paid" : "pending",
+        square_payment_id: body.square_payment_id || null,
+        deposit_amount: body.deposit_amount || 0,
       })
       .select()
       .single();
@@ -138,12 +146,23 @@ export async function POST(request) {
       return Response.json({ error: "Failed to save booking. Please try again." }, { status: 500 });
     }
 
-    sendTelegramNotification({ ...body, id: booking.id }).catch((err) =>
+    sendTelegramNotification({
+      ...body,
+      id: booking.id,
+      square_payment_id: body.square_payment_id || null,
+      deposit_amount: body.deposit_amount || 0,
+    }).catch((err) =>
       console.error("Telegram notification error:", err)
     );
 
     return Response.json(
-      { success: true, bookingId: booking.id, message: "Booking request received! We'll confirm availability shortly." },
+      {
+        success: true,
+        bookingId: booking.id,
+        message: hasSquarePayment
+          ? "Booking confirmed! Your deposit has been processed."
+          : "Booking request received! We'll confirm availability shortly.",
+      },
       { status: 201 }
     );
   } catch (error) {
