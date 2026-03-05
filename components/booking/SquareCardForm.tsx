@@ -122,7 +122,7 @@ const SquareCardForm = forwardRef<SquareCardFormHandle, SquareCardFormProps>(
             input: {
               backgroundColor: 'rgba(255, 255, 255, 0.05)',
               color: '#f5f0eb',
-              fontFamily: '"DM Sans", sans-serif',
+              fontFamily: 'sans-serif',
               fontSize: '14px',
             },
             'input::placeholder': {
