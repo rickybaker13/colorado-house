@@ -156,3 +156,42 @@ export async function insertBlogPost(post: Omit<BlogPost, "id" | "created_at">) 
   if (error) throw new Error(`Failed to insert blog post: ${error.message}`);
   return data;
 }
+
+/**
+ * Fetch recently published blog posts (published in the last 14 days)
+ * that haven't already had social promotion generated.
+ * We track this by checking if social_posts exist with content_theme = 'blog_promotion'
+ * and content containing the blog slug.
+ */
+export async function getRecentPublishedBlogPosts(): Promise<BlogPost[]> {
+  const fourteenDaysAgo = new Date();
+  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+  const { data, error } = await supabase
+    .from("blog_posts")
+    .select("*")
+    .eq("status", "published")
+    .gte("published_at", fourteenDaysAgo.toISOString())
+    .order("published_at", { ascending: false });
+
+  if (error) throw new Error(`Failed to fetch published blog posts: ${error.message}`);
+  return data || [];
+}
+
+/**
+ * Check if a blog post has already had social promotion posts generated.
+ * Looks for social_posts with content_theme = 'blog_promotion_[slug]'.
+ */
+export async function hasBlogBeenPromoted(slug: string, round: number): Promise<boolean> {
+  const theme = `blog_promotion_${slug}_r${round}`;
+  const { count, error } = await supabase
+    .from("social_posts")
+    .select("id", { count: "exact", head: true })
+    .eq("content_theme", theme);
+
+  if (error) {
+    console.warn(`Failed to check promotion status for ${slug}: ${error.message}`);
+    return false;
+  }
+  return (count ?? 0) > 0;
+}

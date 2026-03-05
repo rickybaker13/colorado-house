@@ -1,0 +1,44 @@
+# ============================================================
+# Blog-to-Social Promotion
+# ============================================================
+# Runs twice per week (Wednesday & Saturday) at 8am Mountain Time
+# Generates social media posts that promote the latest blog post
+# and drive traffic to skipurgatoryhouse.com/blog/[slug]
+# ============================================================
+
+name: Promote Blog on Social
+
+on:
+  schedule:
+    # Wednesday 8am MT = 3pm UTC (winter) / 2pm UTC (summer)
+    - cron: '0 15 * * 3'
+    # Saturday 8am MT = 3pm UTC (winter) / 2pm UTC (summer)
+    - cron: '0 15 * * 6'
+  workflow_dispatch: # Allow manual triggers
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: marketing
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate blog promotion posts
+        run: npm run promote-blog
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}

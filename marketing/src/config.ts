@@ -13,8 +13,8 @@ export const PROPERTY = {
   bedrooms: 4,
   bathrooms: 3.5,
   maxGuests: 10,
-  website: "https://colorado-house.vercel.app",
-  bookingUrl: "https://colorado-house.vercel.app/booking",
+  website: "https://skipurgatoryhouse.com",
+  bookingUrl: "https://skipurgatoryhouse.com/booking",
 
   highlights: [
     "Steps from Purgatory Resort ski lifts",
@@ -101,7 +101,7 @@ export const BRAND_VOICE = {
 
   callToAction: [
     "Link in bio for availability",
-    "Book direct at colorado-house.vercel.app and save vs Airbnb",
+    "Book direct at skipurgatoryhouse.com and save vs Airbnb",
     "DM us for current rates",
     "See the full trail guide on our site (link in bio)",
   ],

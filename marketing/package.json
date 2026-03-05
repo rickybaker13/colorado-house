@@ -7,6 +7,7 @@
     "generate": "tsx src/generate-content.ts",
     "publish": "tsx src/publish-approved.ts",
     "generate-blog": "tsx src/generate-blog.ts",
+    "promote-blog": "tsx src/generate-blog-social.ts",
     "review": "tsx src/review-queue.ts"
   },
   "dependencies": {
