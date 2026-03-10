@@ -52,7 +52,7 @@ export async function GET() {
     const { data: bookings } = await supabase
       .from("bookings")
       .select("check_in, check_out")
-      .in("status", ["confirmed", "requested"]);
+      .in("status", ["confirmed", "requested", "pending_approval"]);
 
     if (bookings) {
       for (const booking of bookings) {

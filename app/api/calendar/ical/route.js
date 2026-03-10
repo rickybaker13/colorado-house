@@ -19,7 +19,7 @@ export async function GET() {
     const { data: bookings } = await supabase
       .from("bookings")
       .select("id, check_in, check_out, guest_name, status")
-      .in("status", ["confirmed", "requested"])
+      .in("status", ["confirmed", "requested", "pending_approval"])
       .order("check_in", { ascending: true });
 
     const { data: blockedDates } = await supabase
@@ -45,7 +45,7 @@ export async function GET() {
         const uid = `booking-${booking.id}@purgatorytownhouse.com`;
         const summary = booking.status === "confirmed"
           ? `Booked: ${booking.guest_name}`
-          : `Pending: ${booking.guest_name}`;
+          : `Pending Approval: ${booking.guest_name}`;
 
         ical.push(
           "BEGIN:VEVENT",
