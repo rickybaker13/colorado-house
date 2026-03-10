@@ -468,13 +468,18 @@ export default function BookingClient() {
               <CheckCircle2 size={40} className="text-green-400" />
             </div>
             <h1 className="font-display text-display-md text-snow mb-4">
-              {depositPaid ? 'Booking Confirmed' : 'Booking Request Received'}
+              Booking Request Received
             </h1>
             <p className="font-sans text-body-lg text-white/60 mb-10">
               {depositPaid
-                ? `Your 50% deposit of $${depositPaid.toLocaleString()} has been charged. We'll be in touch with check-in details!`
-                : "We'll confirm availability and send payment instructions shortly."}
+                ? `Your 50% deposit of $${depositPaid.toLocaleString()} has been charged. We're reviewing your request and will confirm shortly.`
+                : "We're reviewing your request and will confirm availability shortly."}
             </p>
+            <div className="bg-stone/10 rounded-xl p-4 mb-6 border border-stone/20">
+              <p className="font-sans text-sm text-stone-light">
+                All bookings are reviewed to ensure availability with our calendar. You&apos;ll receive a confirmation email once approved.
+              </p>
+            </div>
 
             <div className="bg-charcoal-light rounded-2xl p-8 text-left space-y-4 border border-white/5">
               <div className="flex justify-between text-sm font-sans">
@@ -515,7 +520,7 @@ export default function BookingClient() {
               )}
             </div>
 
-            <p className="text-sm text-white/40 mt-6 font-sans">A confirmation email will be sent to {email}</p>
+            <p className="text-sm text-white/40 mt-6 font-sans">We&apos;ll send a confirmation to {email} once your booking is approved</p>
           </motion.div>
         </div>
       </div>

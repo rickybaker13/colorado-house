@@ -16,7 +16,7 @@ async function sendTelegramNotification(booking) {
   const isDepositPaid = booking.square_payment_id && booking.deposit_amount > 0;
 
   const message = `
-🏔️ *${isDepositPaid ? "CONFIRMED BOOKING (Deposit Paid)" : "NEW BOOKING REQUEST"}*
+🏔️ *NEW BOOKING — APPROVAL NEEDED*
 
 👤 *Guest:* ${booking.guest_name}
 📧 *Email:* ${booking.guest_email}
@@ -34,12 +34,22 @@ async function sendTelegramNotification(booking) {
 ${booking.btc_discount > 0 ? `₿ *BTC Discount:* -$${booking.btc_discount}\n` : ""}💵 *Final Total:* $${booking.final_total}
 
 💳 *Payment Method:* ${booking.payment_method}
-${isDepositPaid ? `✅ *Deposit Paid:* $${booking.deposit_amount} (50% via Square)\n🆔 *Square ID:* ${booking.square_payment_id}` : ""}
+${isDepositPaid ? `💳 *Deposit Charged:* $${booking.deposit_amount} (50% via Square)\n🆔 *Square ID:* ${booking.square_payment_id}` : ""}
 
 ${booking.guest_message ? `💬 *Message:* ${booking.guest_message}` : ""}
 
-${isDepositPaid ? "✅ Confirmed — deposit received" : "⏳ Status: Awaiting your confirmation"}
+⏳ *Tap below to approve or deny this booking.*
   `.trim();
+
+  // Inline keyboard with Approve / Deny buttons
+  const inlineKeyboard = {
+    inline_keyboard: [
+      [
+        { text: "✅ Approve", callback_data: `approve:${booking.id}` },
+        { text: "❌ Deny", callback_data: `deny:${booking.id}` },
+      ],
+    ],
+  };
 
   try {
     const response = await fetch(
@@ -51,6 +61,7 @@ ${isDepositPaid ? "✅ Confirmed — deposit received" : "⏳ Status: Awaiting y
           chat_id: chatId,
           text: message,
           parse_mode: "Markdown",
+          reply_markup: inlineKeyboard,
         }),
       }
     );
@@ -101,7 +112,7 @@ export async function POST(request) {
     const { data: conflicts } = await supabase
       .from("bookings")
       .select("id, check_in, check_out")
-      .in("status", ["confirmed", "requested"])
+      .in("status", ["confirmed", "requested", "pending_approval"])
       .lt("check_in", body.check_out)
       .gt("check_out", body.check_in);
 
@@ -112,9 +123,7 @@ export async function POST(request) {
       );
     }
 
-    // If a Square payment ID is present, the deposit has been paid — auto-confirm
-    const hasSquarePayment = body.square_payment_id && body.deposit_amount > 0;
-
+    // All bookings start as pending_approval — must be approved via Telegram
     const { data: booking, error } = await supabase
       .from("bookings")
       .insert({
@@ -133,8 +142,8 @@ export async function POST(request) {
         btc_discount: body.btc_discount || 0,
         final_total: body.final_total,
         payment_method: body.payment_method,
-        status: hasSquarePayment ? "confirmed" : "requested",
-        payment_status: hasSquarePayment ? "deposit_paid" : "pending",
+        status: "pending_approval",
+        payment_status: "pending",
         square_payment_id: body.square_payment_id || null,
         deposit_amount: body.deposit_amount || 0,
       })
@@ -155,13 +164,15 @@ export async function POST(request) {
       console.error("Telegram notification error:", err)
     );
 
+    const hasDeposit = body.square_payment_id && body.deposit_amount > 0;
+
     return Response.json(
       {
         success: true,
         bookingId: booking.id,
-        message: hasSquarePayment
-          ? "Booking confirmed! Your deposit has been processed."
-          : "Booking request received! We'll confirm availability shortly.",
+        message: hasDeposit
+          ? "Your deposit has been processed. We'll confirm your booking shortly after checking availability."
+          : "Booking request received! We'll confirm availability and get back to you shortly.",
       },
       { status: 201 }
     );
