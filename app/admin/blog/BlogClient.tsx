@@ -41,6 +41,11 @@ function StatusBadge({ status }: { status: string }) {
       color: '#4ade80',
       border: '1px solid rgba(34,197,94,0.2)',
     },
+    published: {
+      backgroundColor: 'rgba(59,130,246,0.12)',
+      color: '#60a5fa',
+      border: '1px solid rgba(59,130,246,0.2)',
+    },
   }
   return (
     <span style={{
@@ -351,7 +356,7 @@ export default function BlogClient({ initialPosts }: Props) {
                             }}
                           >
                             <CheckCircle size={13} />
-                            Approve
+                            Approve & Publish
                           </button>
                           <button
                             onClick={() => patchPost(post.id, { status: 'rejected' })}

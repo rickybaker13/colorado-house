@@ -48,6 +48,14 @@ export async function PATCH(
       return NextResponse.json({ error: 'No valid fields provided' }, { status: 400 })
     }
 
+    // Blog posts: approving should publish immediately (sets status to
+    // "published" and stamps published_at) so the post appears on the
+    // website and becomes eligible for social promotion.
+    if (table === 'blog_posts' && updates.status === 'approved') {
+      updates.status = 'published'
+      updates.published_at = new Date().toISOString()
+    }
+
     const serviceClient = getServiceClient()
     const { data, error } = await serviceClient
       .from(table)
