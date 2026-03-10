@@ -1,5 +1,7 @@
 import { getServiceClient } from "@/lib/supabase";
 import { NextRequest } from "next/server";
+import { SquareClient, SquareEnvironment } from "square";
+import { randomUUID } from "crypto";
 
 /**
  * Telegram Bot Webhook — handles inline button callbacks for booking approvals.
@@ -13,6 +15,14 @@ import { NextRequest } from "next/server";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
 const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET;
+
+const squareClient = new SquareClient({
+  token: process.env.SQUARE_ACCESS_TOKEN || "",
+  environment:
+    process.env.SQUARE_ENVIRONMENT === "production"
+      ? SquareEnvironment.Production
+      : SquareEnvironment.Sandbox,
+});
 
 async function editTelegramMessage(
   chatId: number | string,
@@ -125,7 +135,42 @@ Status: ${newStatus === "confirmed" ? "Confirmed (deposit paid)" : "Approved —
       await editTelegramMessage(chatId, messageId, updatedMsg);
       await answerCallback(callback.id, "Booking approved!");
     } else {
-      // Deny
+      // Deny — refund the deposit if one was charged
+      let refundNote = "";
+
+      if (booking.square_payment_id && booking.deposit_amount > 0) {
+        try {
+          const refundAmountCents = BigInt(
+            Math.round(booking.deposit_amount * 100)
+          );
+          const refundResponse = await squareClient.refunds.refundPayment({
+            idempotencyKey: randomUUID(),
+            paymentId: booking.square_payment_id,
+            amountMoney: {
+              amount: refundAmountCents,
+              currency: "USD",
+            },
+            reason: "Booking denied by host",
+          });
+
+          const refund = refundResponse.refund;
+          if (
+            refund &&
+            (refund.status === "COMPLETED" ||
+              refund.status === "PENDING" ||
+              refund.status === "APPROVED")
+          ) {
+            refundNote = `\n💸 Deposit of $${booking.deposit_amount} refunded (${refund.status})`;
+          } else {
+            refundNote = `\n⚠️ Refund status: ${refund?.status || "unknown"} — check Square dashboard`;
+          }
+        } catch (refundErr) {
+          console.error("Square refund failed:", refundErr);
+          refundNote =
+            "\n⚠️ Auto-refund failed — refund manually in Square dashboard";
+        }
+      }
+
       await supabase
         .from("bookings")
         .update({ status: "denied" })
@@ -137,13 +182,15 @@ Status: ${newStatus === "confirmed" ? "Confirmed (deposit paid)" : "Approved —
 📅 ${booking.check_in} → ${booking.check_out}
 💵 $${booking.final_total}
 
-This booking was denied.`;
+This booking was denied.${refundNote}`;
 
       await editTelegramMessage(chatId, messageId, updatedMsg);
-      await answerCallback(callback.id, "Booking denied");
-
-      // TODO: If deposit was already charged via Square, you may want to
-      // issue a refund here. For now, handle refunds manually.
+      await answerCallback(
+        callback.id,
+        booking.square_payment_id
+          ? "Booking denied — refund processing"
+          : "Booking denied"
+      );
     }
 
     return Response.json({ ok: true });
