@@ -4,6 +4,8 @@ async function sendTelegramNotification(booking) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
 
+  console.log("Telegram config check — token exists:", !!token, "chatId:", chatId);
+
   if (!token || !chatId) {
     console.warn("Telegram credentials not configured, skipping notification");
     return;
@@ -66,9 +68,11 @@ ${booking.guest_message ? `💬 *Message:* ${booking.guest_message}` : ""}
       }
     );
 
+    const responseText = await response.text();
     if (!response.ok) {
-      const err = await response.text();
-      console.error("Telegram API error:", err);
+      console.error("Telegram API error:", response.status, responseText);
+    } else {
+      console.log("Telegram notification sent successfully:", responseText);
     }
   } catch (err) {
     console.error("Telegram notification failed:", err);
@@ -154,6 +158,8 @@ export async function POST(request) {
       console.error("Supabase insert error:", error);
       return Response.json({ error: "Failed to save booking. Please try again." }, { status: 500 });
     }
+
+    console.log("Booking created successfully, id:", booking.id, "— sending Telegram notification");
 
     sendTelegramNotification({
       ...body,
