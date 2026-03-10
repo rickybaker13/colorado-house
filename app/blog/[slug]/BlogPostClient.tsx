@@ -73,6 +73,38 @@ function sanitizeUrl(url: string): string {
   return '#';
 }
 
+// Map of keywords to local photo filenames for resolving image suggestion comments
+const IMAGE_KEYWORD_MAP: [RegExp, string][] = [
+  [/san juan|mountain.*panoram|morning mist|peaks/i, 'hero-mountain.jpg'],
+  [/sunset|alpenglow|evening/i, 'alpenglow-sunset.jpg'],
+  [/alpine.*valley|valley.*view/i, 'alpine-valley.jpg'],
+  [/wildflower|meadow|bloom/i, 'wildflower-meadow-peaks.jpg'],
+  [/ice lake|ice.*basin/i, 'ice-lake-panoramic.jpg'],
+  [/columbine.*lake/i, 'columbine-lake.jpg'],
+  [/island.*lake/i, 'island-lake-panoramic.jpg'],
+  [/kayak|paddl/i, 'kayak-mountain-lake.jpg'],
+  [/waterfall|falls|cascade/i, 'waterfall.jpg'],
+  [/trail|hik|path/i, 'ice-lakes-trail-alpine.jpg'],
+  [/engineer.*mountain/i, 'engineer-mountain.jpg'],
+  [/downtown.*durango|durango.*town|main.*avenue/i, 'durango-downtown-main.jpg'],
+  [/mesa verde|cliff.*dwelling/i, 'mesa-verde-cliff-palace.jpg'],
+  [/railroad|train|narrow gauge/i, 'durango-downtown-main.jpg'],
+  [/winter|snow|ski/i, 'durango-downtown-winter.jpg'],
+  [/exterior|townhouse|property|cabin/i, 'exterior-1.jpg'],
+  [/interior|living|kitchen|bedroom|cozy/i, 'living-room-1.jpg'],
+  [/lake/i, 'bullion-king-lake.jpg'],
+  [/sunflower/i, 'sunflowers-mountain-valley.jpg'],
+];
+
+function resolveImageSuggestion(comment: string): string {
+  for (const [pattern, filename] of IMAGE_KEYWORD_MAP) {
+    if (pattern.test(comment)) {
+      return filename;
+    }
+  }
+  return 'hero-mountain.jpg'; // fallback
+}
+
 /**
  * Convert markdown content to HTML.
  * Handles: headings (##, ###), bold, italic, images, links, paragraphs, blockquotes, hr.
@@ -173,6 +205,20 @@ function markdownToHtml(markdown: string): string {
       const quoteText = processInline(trimmed.slice(2));
       htmlParts.push(
         `<blockquote style="border-left: 3px solid #c4956a; padding-left: 20px; margin: 32px 0; font-style: italic; color: rgba(26,26,46,0.6); font-size: 18px; line-height: 1.7;">${quoteText}</blockquote>`
+      );
+      continue;
+    }
+
+    // Image suggestion comments: <!-- Image suggestion: ... -->
+    const imageCommentMatch = trimmed.match(/^<!--\s*Image\s*suggestion:\s*(.+?)\s*-->$/i);
+    if (imageCommentMatch) {
+      flushParagraph();
+      const description = imageCommentMatch[1];
+      const filename = resolveImageSuggestion(description);
+      const cleanSrc = sanitizeUrl(filename);
+      const cleanAlt = escapeHtml(description);
+      htmlParts.push(
+        `<figure style="margin: 32px 0;"><img src="${cleanSrc}" alt="${cleanAlt}" style="width: 100%; height: auto; display: block;" /><figcaption style="font-size: 14px; color: rgba(26,26,46,0.4); margin-top: 10px; font-style: italic;">${cleanAlt}</figcaption></figure>`
       );
       continue;
     }
