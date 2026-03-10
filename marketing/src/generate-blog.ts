@@ -181,7 +181,78 @@ EXCERPT_JSON: {"excerpt": "A 1-2 sentence excerpt for SEO meta description (unde
 
   const blogContent = text.replace(/EXCERPT_JSON:.*$/s, "").trim();
 
-  return { content: blogContent, excerpt };
+  // Resolve any image suggestions to actual images
+  const resolvedContent = await resolveImages(blogContent);
+
+  return { content: resolvedContent, excerpt };
+}
+
+const ALL_LOCAL_IMAGES = [
+  ...PHOTO_LIBRARY.mountains,
+  ...PHOTO_LIBRARY.lakes,
+  ...PHOTO_LIBRARY.trails,
+  ...PHOTO_LIBRARY.durango,
+  ...PHOTO_LIBRARY.exterior,
+];
+
+async function searchPexels(query: string): Promise<string | null> {
+  const apiKey = process.env.PEXELS_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=1&orientation=landscape`;
+    const res = await fetch(url, {
+      headers: { Authorization: apiKey },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.photos?.[0]?.src?.large2x ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function resolveImages(content: string): Promise<string> {
+  // Find markdown images that reference local filenames not in our library
+  const imagePattern = /!\[([^\]]*)\]\(([^)]+)\)/g;
+  const usedImages = new Set<string>();
+  let result = content;
+
+  const matches = [...content.matchAll(imagePattern)];
+  for (const match of matches) {
+    const alt = match[1];
+    const src = match[2];
+
+    // If it's already a URL or a known local file, keep it (but track for dedup)
+    if (src.startsWith("http")) {
+      continue;
+    }
+    if (ALL_LOCAL_IMAGES.includes(src) && !usedImages.has(src)) {
+      usedImages.add(src);
+      continue;
+    }
+
+    // Duplicate local image or unknown file — replace with Pexels
+    const pexelsUrl = await searchPexels(`${alt || src} Colorado mountains`);
+    if (pexelsUrl) {
+      result = result.replace(match[0], `![${alt}](${pexelsUrl})`);
+    }
+  }
+
+  // Also resolve any HTML comment suggestions that Claude may have included
+  const commentPattern = /^<!--\s*Image\s*suggestion:\s*(.+?)\s*-->$/gim;
+  const commentMatches = [...result.matchAll(commentPattern)];
+  for (const match of commentMatches) {
+    const description = match[1];
+    const pexelsUrl = await searchPexels(`${description} Colorado mountains`);
+    if (pexelsUrl) {
+      result = result.replace(match[0], `![${description}](${pexelsUrl})`);
+    } else {
+      // Remove the comment rather than leave it visible
+      result = result.replace(match[0], "");
+    }
+  }
+
+  return result;
 }
 
 async function main() {
