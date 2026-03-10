@@ -118,7 +118,14 @@ DO NOT: ${BRAND_VOICE.doNot.join(". ")}
 - End with a soft call-to-action mentioning the townhouse (not salesy)
 - Use H2 and H3 headings for structure
 - Write in markdown format
-- Include suggestions for where to place images (as markdown comments)
+- Include 2-4 images throughout the post using markdown syntax: ![descriptive alt text](filename.jpg)
+- Choose image filenames from this available photo library:
+  Mountains: ${PHOTO_LIBRARY.mountains.join(", ")}
+  Lakes: ${PHOTO_LIBRARY.lakes.join(", ")}
+  Trails: ${PHOTO_LIBRARY.trails.join(", ")}
+  Durango: ${PHOTO_LIBRARY.durango.join(", ")}
+  Exterior: ${PHOTO_LIBRARY.exterior.join(", ")}
+- Pick images that match the section content. Do NOT use HTML comments for image suggestions.
 - Focus on being genuinely useful — this should be a guide someone would bookmark
 - Target the specific audience mentioned in the brief`;
 }
