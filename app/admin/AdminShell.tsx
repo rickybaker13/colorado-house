@@ -9,6 +9,7 @@ import {
   FileText,
   Lightbulb,
   History,
+  CalendarCheck,
   Menu,
   X,
   LogOut,
@@ -17,6 +18,7 @@ import {
 
 const NAV_ITEMS = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/bookings', label: 'Bookings', icon: CalendarCheck },
   { href: '/admin/queue', label: 'Social Queue', icon: MessageSquare },
   { href: '/admin/blog', label: 'Blog Posts', icon: FileText },
   { href: '/admin/instruct', label: 'Instructions', icon: Lightbulb },
