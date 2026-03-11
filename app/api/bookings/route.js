@@ -17,31 +17,33 @@ async function sendTelegramNotification(booking) {
 
   const isDepositPaid = booking.square_payment_id && booking.deposit_amount > 0;
 
-  const message = `
-🏔️ *NEW BOOKING — APPROVAL NEEDED*
-
-👤 *Guest:* ${booking.guest_name}
-📧 *Email:* ${booking.guest_email}
-📱 *Phone:* ${booking.guest_phone || "Not provided"}
-
-📅 *Check-in:* ${booking.check_in}
-📅 *Check-out:* ${booking.check_out}
-🌙 *Nights:* ${nights}
-👥 *Guests:* ${booking.num_guests}
-🐾 *Pets:* ${booking.num_pets}
-
-💰 *Nightly Total:* $${booking.nightly_total}
-🧹 *Cleaning Fee:* $${booking.cleaning_fee}
-🐾 *Pet Fee:* $${booking.pet_fee}
-${booking.btc_discount > 0 ? `₿ *BTC Discount:* -$${booking.btc_discount}\n` : ""}💵 *Final Total:* $${booking.final_total}
-
-💳 *Payment Method:* ${booking.payment_method}
-${isDepositPaid ? `💳 *Deposit Charged:* $${booking.deposit_amount} (50% via Square)\n🆔 *Square ID:* ${booking.square_payment_id}` : ""}
-
-${booking.guest_message ? `💬 *Message:* ${booking.guest_message}` : ""}
-
-⏳ *Tap below to approve or deny this booking.*
-  `.trim();
+  const message = [
+    `🏔️ <b>NEW BOOKING — APPROVAL NEEDED</b>`,
+    ``,
+    `👤 <b>Guest:</b> ${booking.guest_name}`,
+    `📧 <b>Email:</b> ${booking.guest_email}`,
+    `📱 <b>Phone:</b> ${booking.guest_phone || "Not provided"}`,
+    ``,
+    `📅 <b>Check-in:</b> ${booking.check_in}`,
+    `📅 <b>Check-out:</b> ${booking.check_out}`,
+    `🌙 <b>Nights:</b> ${nights}`,
+    `👥 <b>Guests:</b> ${booking.num_guests}`,
+    `🐾 <b>Pets:</b> ${booking.num_pets}`,
+    ``,
+    `💰 <b>Nightly Total:</b> $${booking.nightly_total}`,
+    `🧹 <b>Cleaning Fee:</b> $${booking.cleaning_fee}`,
+    `🐾 <b>Pet Fee:</b> $${booking.pet_fee}`,
+    booking.btc_discount > 0 ? `₿ <b>BTC Discount:</b> -$${booking.btc_discount}` : null,
+    `💵 <b>Final Total:</b> $${booking.final_total}`,
+    ``,
+    `💳 <b>Payment Method:</b> ${booking.payment_method}`,
+    isDepositPaid ? `💳 <b>Deposit Charged:</b> $${booking.deposit_amount} (50% via Square)` : null,
+    isDepositPaid ? `🆔 <b>Square ID:</b> ${booking.square_payment_id}` : null,
+    booking.guest_message ? `` : null,
+    booking.guest_message ? `💬 <b>Message:</b> ${booking.guest_message}` : null,
+    ``,
+    `⏳ <b>Tap below to approve or deny this booking.</b>`,
+  ].filter(line => line !== null).join("\n");
 
   // Inline keyboard with Approve / Deny buttons
   const inlineKeyboard = {
@@ -62,7 +64,7 @@ ${booking.guest_message ? `💬 *Message:* ${booking.guest_message}` : ""}
         body: JSON.stringify({
           chat_id: chatId,
           text: message,
-          parse_mode: "Markdown",
+          parse_mode: "HTML",
           reply_markup: inlineKeyboard,
         }),
       }
@@ -161,14 +163,16 @@ export async function POST(request) {
 
     console.log("Booking created successfully, id:", booking.id, "— sending Telegram notification");
 
-    sendTelegramNotification({
-      ...body,
-      id: booking.id,
-      square_payment_id: body.square_payment_id || null,
-      deposit_amount: body.deposit_amount || 0,
-    }).catch((err) =>
-      console.error("Telegram notification error:", err)
-    );
+    try {
+      await sendTelegramNotification({
+        ...body,
+        id: booking.id,
+        square_payment_id: body.square_payment_id || null,
+        deposit_amount: body.deposit_amount || 0,
+      });
+    } catch (err) {
+      console.error("Telegram notification error:", err);
+    }
 
     const hasDeposit = body.square_payment_id && body.deposit_amount > 0;
 
