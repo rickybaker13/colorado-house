@@ -1,5 +1,5 @@
-import BookingsClient from './BookingsClient'
+import BookingsPageClient from './BookingsPageClient'
 
 export default function BookingsPage() {
-  return <BookingsClient />
+  return <BookingsPageClient />
 }
