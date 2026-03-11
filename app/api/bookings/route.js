@@ -163,14 +163,16 @@ export async function POST(request) {
 
     console.log("Booking created successfully, id:", booking.id, "— sending Telegram notification");
 
-    sendTelegramNotification({
-      ...body,
-      id: booking.id,
-      square_payment_id: body.square_payment_id || null,
-      deposit_amount: body.deposit_amount || 0,
-    }).catch((err) =>
-      console.error("Telegram notification error:", err)
-    );
+    try {
+      await sendTelegramNotification({
+        ...body,
+        id: booking.id,
+        square_payment_id: body.square_payment_id || null,
+        deposit_amount: body.deposit_amount || 0,
+      });
+    } catch (err) {
+      console.error("Telegram notification error:", err);
+    }
 
     const hasDeposit = body.square_payment_id && body.deposit_amount > 0;
 
