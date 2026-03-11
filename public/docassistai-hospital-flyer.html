@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DocAssistAI — AI-Powered Clinical Documentation</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    @page {
+      size: letter;
+      margin: 0;
+    }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      background: #ffffff;
+      color: #1a1a2e;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .flyer {
+      width: 8.5in;
+      height: 11in;
+      margin: 0 auto;
+      position: relative;
+      overflow: hidden;
+      background: #ffffff;
+    }
+
+    /* ── Top Banner ── */
+    .top-banner {
+      background: linear-gradient(135deg, #0f4c75 0%, #1b6ca8 40%, #3282b8 100%);
+      padding: 0.45in 0.6in 0.4in;
+      position: relative;
+    }
+
+    .top-banner::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: linear-gradient(90deg, #00b4d8, #48cae4, #90e0ef, #48cae4, #00b4d8);
+    }
+
+    .logo-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .logo-icon svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .logo-text {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 800;
+      font-size: 26px;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-text span {
+      color: #90e0ef;
+    }
+
+    .top-url {
+      font-size: 14px;
+      color: rgba(255,255,255,0.85);
+      font-weight: 500;
+      letter-spacing: 0.3px;
+    }
+
+    /* ── Hero Section ── */
+    .hero {
+      padding: 0.35in 0.6in 0.25in;
+      text-align: center;
+      background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%);
+    }
+
+    .hero h1 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 800;
+      font-size: 34px;
+      line-height: 1.15;
+      color: #0f4c75;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      color: #00b4d8;
+    }
+
+    .hero .subtitle {
+      font-size: 16px;
+      color: #555;
+      font-weight: 400;
+      line-height: 1.5;
+      max-width: 5.8in;
+      margin: 0 auto;
+    }
+
+    /* ── Audience Badges ── */
+    .audience {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      padding: 0.15in 0.6in 0.2in;
+    }
+
+    .badge {
+      background: linear-gradient(135deg, #e8f4fd, #dbeafe);
+      border: 1px solid #bfdbfe;
+      border-radius: 20px;
+      padding: 6px 18px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #0f4c75;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+
+    /* ── Features Grid ── */
+    .features {
+      padding: 0.15in 0.5in 0.2in;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .feature-card {
+      border: 1.5px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 18px 18px 16px;
+      position: relative;
+      overflow: hidden;
+      background: #ffffff;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+    }
+
+    .feature-card:nth-child(1)::before { background: linear-gradient(90deg, #0f4c75, #3282b8); }
+    .feature-card:nth-child(2)::before { background: linear-gradient(90deg, #00b4d8, #48cae4); }
+    .feature-card:nth-child(3)::before { background: linear-gradient(90deg, #2d6a4f, #52b788); }
+    .feature-card:nth-child(4)::before { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
+
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+
+    .feature-card:nth-child(1) .feature-icon { background: #e8f4fd; }
+    .feature-card:nth-child(2) .feature-icon { background: #e0f7fa; }
+    .feature-card:nth-child(3) .feature-icon { background: #e8f5e9; }
+    .feature-card:nth-child(4) .feature-icon { background: #ede9fe; }
+
+    .feature-icon svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .feature-card h3 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 5px;
+    }
+
+    .feature-card p {
+      font-size: 12.5px;
+      line-height: 1.55;
+      color: #555;
+      font-weight: 400;
+    }
+
+    /* ── Stats Row ── */
+    .stats-row {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      padding: 0.18in 0.6in;
+      background: linear-gradient(135deg, #0f4c75, #1b6ca8);
+      margin: 0.15in 0.5in;
+      border-radius: 14px;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-number {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 30px;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.1;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: rgba(255,255,255,0.8);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-top: 2px;
+    }
+
+    .stat-divider {
+      width: 1px;
+      background: rgba(255,255,255,0.2);
+      align-self: stretch;
+    }
+
+    /* ── HIPAA Section ── */
+    .hipaa-section {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0.12in 0.6in;
+      margin: 0.06in 0.5in;
+      background: #f0fdf4;
+      border: 1.5px solid #bbf7d0;
+      border-radius: 12px;
+    }
+
+    .hipaa-shield {
+      flex-shrink: 0;
+      width: 44px;
+      height: 44px;
+      background: #dcfce7;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hipaa-shield svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .hipaa-text h3 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: #166534;
+      margin-bottom: 1px;
+    }
+
+    .hipaa-text p {
+      font-size: 12px;
+      color: #555;
+      line-height: 1.45;
+    }
+
+    /* ── CTA Section ── */
+    .cta-section {
+      text-align: center;
+      padding: 0.2in 0.6in 0.15in;
+    }
+
+    .cta-box {
+      background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+      border: 2px dashed #7dd3fc;
+      border-radius: 16px;
+      padding: 20px 28px 18px;
+    }
+
+    .cta-box h2 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 22px;
+      font-weight: 800;
+      color: #0f4c75;
+      margin-bottom: 4px;
+    }
+
+    .cta-box .free-line {
+      font-size: 15px;
+      color: #00b4d8;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .cta-url {
+      display: inline-block;
+      background: linear-gradient(135deg, #0f4c75, #1b6ca8);
+      color: #ffffff;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+      padding: 10px 36px;
+      border-radius: 30px;
+      letter-spacing: 0.3px;
+      text-decoration: none;
+    }
+
+    .cta-sub {
+      margin-top: 8px;
+      font-size: 12.5px;
+      color: #777;
+    }
+
+    .cta-sub strong {
+      color: #0f4c75;
+    }
+
+    /* ── Bottom Footer ── */
+    .bottom-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #0f4c75;
+      padding: 10px 0.6in;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .bottom-bar p {
+      font-size: 11px;
+      color: rgba(255,255,255,0.7);
+    }
+
+    .bottom-bar .site {
+      font-weight: 600;
+      color: #90e0ef;
+      font-size: 12px;
+    }
+
+    /* Print optimization */
+    @media print {
+      body { margin: 0; }
+      .flyer {
+        width: 100%;
+        height: 100%;
+        page-break-after: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="flyer">
+
+    <!-- Top Banner -->
+    <div class="top-banner">
+      <div class="logo-row">
+        <div class="logo">
+          <div class="logo-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <path d="M9 15l2 2 4-4"/>
+            </svg>
+          </div>
+          <div class="logo-text">DocAssist<span>AI</span></div>
+        </div>
+        <div class="top-url">docassistai.app</div>
+      </div>
+    </div>
+
+    <!-- Hero -->
+    <div class="hero">
+      <h1>Finish Your Clinical Notes<br>in <em>Minutes</em>, Not Hours</h1>
+      <p class="subtitle">
+        AI-powered clinical documentation that lets you focus on patients, not paperwork.
+        Built by clinicians, for clinicians.
+      </p>
+    </div>
+
+    <!-- Audience Badges -->
+    <div class="audience">
+      <div class="badge">Physicians</div>
+      <div class="badge">Nurse Practitioners</div>
+      <div class="badge">Physician Assistants</div>
+      <div class="badge">Residents</div>
+    </div>
+
+    <!-- Features Grid -->
+    <div class="features">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#0f4c75" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </div>
+        <h3>Save Hours Every Day</h3>
+        <p>Generate complete, structured clinical notes in minutes. Eliminate late-night charting and reduce documentation burnout so you can get home on time.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#00b4d8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+            <path d="M7 10l3 3 4-4 3 3"/>
+          </svg>
+        </div>
+        <h3>Suggested Billing Codes</h3>
+        <p>Automatically generates recommended CPT and E/M billing codes based on your documentation, helping you capture the full value of every encounter.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#2d6a4f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="M9 12l2 2 4-4"/>
+          </svg>
+        </div>
+        <h3>HIPAA-Compliant & Secure</h3>
+        <p>Enterprise-grade encryption and full HIPAA compliance. Your patient data is protected with the highest security standards in healthcare technology.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446A9 9 0 1 1 12 3z"/>
+            <path d="M17 4a2 2 0 0 1 2 2 2 2 0 0 1 2-2 2 2 0 0 1-2-2 2 2 0 0 1-2 2z"/>
+          </svg>
+        </div>
+        <h3>Intelligent & Adaptive</h3>
+        <p>Learns your documentation style and specialty preferences. Supports all major note types — H&Ps, progress notes, discharge summaries, procedure notes, and more.</p>
+      </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-row">
+      <div class="stat">
+        <div class="stat-number">70%</div>
+        <div class="stat-label">Less Time Charting</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <div class="stat-number">2 Min</div>
+        <div class="stat-label">Avg. Note Completion</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <div class="stat-number">24/7</div>
+        <div class="stat-label">Always Available</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <div class="stat-number">100%</div>
+        <div class="stat-label">HIPAA Compliant</div>
+      </div>
+    </div>
+
+    <!-- HIPAA Callout -->
+    <div class="hipaa-section">
+      <div class="hipaa-shield">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <div class="hipaa-text">
+        <h3>Your Data Stays Protected</h3>
+        <p>HIPAA-compliant infrastructure with end-to-end encryption. No patient data is stored or used for model training. Built to meet the strictest healthcare privacy requirements.</p>
+      </div>
+    </div>
+
+    <!-- CTA Section -->
+    <div class="cta-section">
+      <div class="cta-box">
+        <h2>Start Your Free Trial Today</h2>
+        <p class="free-line">No credit card required. No obligation. No risk.</p>
+        <a href="https://docassistai.app" class="cta-url">docassistai.app</a>
+        <p class="cta-sub">Sign up in 30 seconds and start writing better notes <strong>today</strong>.</p>
+      </div>
+    </div>
+
+    <!-- Bottom Bar -->
+    <div class="bottom-bar">
+      <p>&copy; DocAssistAI &nbsp;|&nbsp; AI-Powered Clinical Documentation</p>
+      <p class="site">docassistai.app</p>
+    </div>
+
+  </div>
+</body>
+</html>
