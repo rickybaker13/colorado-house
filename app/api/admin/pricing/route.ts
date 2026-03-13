@@ -105,7 +105,66 @@ export async function POST(request: NextRequest) {
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
       return NextResponse.json(data)
     } else {
-      // Create new
+      // Remove any existing rates that overlap with this new date range.
+      // This prevents duplicate entries from piling up.
+
+      // 1) Fetch all existing rates that overlap the new range
+      const { data: overlapping } = await supabase
+        .from('pricing')
+        .select('*')
+        .lte('start_date', end_date)
+        .gte('end_date', start_date)
+
+      if (overlapping && overlapping.length > 0) {
+        const toDelete: string[] = []
+        const toInsert: { start_date: string; end_date: string; nightly_rate: number; label: string }[] = []
+
+        for (const existing of overlapping) {
+          // Fully covered by new range — delete it
+          if (existing.start_date >= start_date && existing.end_date <= end_date) {
+            toDelete.push(existing.id)
+            continue
+          }
+
+          // Partially overlapping — trim or split
+          toDelete.push(existing.id)
+
+          // Part before the new range
+          if (existing.start_date < start_date) {
+            const dayBefore = new Date(start_date)
+            dayBefore.setDate(dayBefore.getDate() - 1)
+            const trimmedEnd = dayBefore.toISOString().split('T')[0]
+            toInsert.push({
+              start_date: existing.start_date,
+              end_date: trimmedEnd,
+              nightly_rate: existing.nightly_rate,
+              label: existing.label,
+            })
+          }
+
+          // Part after the new range
+          if (existing.end_date > end_date) {
+            const dayAfter = new Date(end_date)
+            dayAfter.setDate(dayAfter.getDate() + 1)
+            const trimmedStart = dayAfter.toISOString().split('T')[0]
+            toInsert.push({
+              start_date: trimmedStart,
+              end_date: existing.end_date,
+              nightly_rate: existing.nightly_rate,
+              label: existing.label,
+            })
+          }
+        }
+
+        if (toDelete.length > 0) {
+          await supabase.from('pricing').delete().in('id', toDelete)
+        }
+        if (toInsert.length > 0) {
+          await supabase.from('pricing').insert(toInsert)
+        }
+      }
+
+      // Insert the new rate
       const { data, error } = await supabase
         .from('pricing')
         .insert({ start_date, end_date, nightly_rate, label })
