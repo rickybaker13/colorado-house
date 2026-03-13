@@ -1,6 +1,6 @@
 import { getServiceClient } from "@/lib/supabase";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
@@ -33,7 +33,7 @@ export async function GET() {
         btcDiscountPercent: config.btc_discount_percent || 15,
         seasonalRates: pricing || [],
       },
-      { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" } }
+      { headers: { "Cache-Control": "no-cache" } }
     );
   } catch (error) {
     console.error("Pricing API error:", error);
