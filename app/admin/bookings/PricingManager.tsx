@@ -9,6 +9,8 @@ import {
   Trash2,
   Save,
   Edit3,
+  Copy,
+  Bookmark,
 } from 'lucide-react'
 
 interface SeasonalRate {
@@ -17,6 +19,11 @@ interface SeasonalRate {
   end_date: string
   nightly_rate: number
   label: string
+}
+
+interface PricingTemplate {
+  label: string
+  nightly_rate: number
 }
 
 interface PricingConfig {
@@ -90,9 +97,19 @@ const inputStyle: React.CSSProperties = {
   width: '100%',
 }
 
+const labelStyle: React.CSSProperties = {
+  fontSize: '11px',
+  color: 'rgba(255,255,255,0.4)',
+  display: 'block',
+  marginBottom: '4px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+}
+
 export default function PricingManager() {
   const [config, setConfig] = useState<PricingConfig | null>(null)
   const [rates, setRates] = useState<SeasonalRate[]>([])
+  const [templates, setTemplates] = useState<PricingTemplate[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -113,6 +130,7 @@ export default function PricingManager() {
   const [formStart, setFormStart] = useState('')
   const [formEnd, setFormEnd] = useState('')
   const [showForm, setShowForm] = useState(false)
+  const [saveAsTemplate, setSaveAsTemplate] = useState(false)
 
   // Config editing
   const [editConfig, setEditConfig] = useState<PricingConfig | null>(null)
@@ -127,6 +145,7 @@ export default function PricingManager() {
         setConfig(data.config)
         setEditConfig(data.config)
         setRates(data.seasonalRates)
+        setTemplates(data.pricingTemplates || [])
       }
     } finally {
       setLoading(false)
@@ -184,6 +203,7 @@ export default function PricingManager() {
       setFormLabel('')
       setFormRate(String(config?.defaultNightlyRate || 500))
       setEditingRate(null)
+      setSaveAsTemplate(false)
       setShowForm(true)
     }
   }
@@ -196,6 +216,7 @@ export default function PricingManager() {
     setFormLabel('')
     setFormRate(String(config?.defaultNightlyRate || 500))
     setEditingRate(null)
+    setSaveAsTemplate(false)
     setShowForm(true)
   }
 
@@ -207,7 +228,21 @@ export default function PricingManager() {
     setFormEnd(rate.end_date)
     setSelectStart(rate.start_date)
     setSelectEnd(rate.end_date)
+    setSaveAsTemplate(false)
     setShowForm(true)
+  }
+
+  function applyTemplate(template: PricingTemplate) {
+    setEditingRate(null)
+    setFormLabel(template.label)
+    setFormRate(String(template.nightly_rate))
+    setSaveAsTemplate(false)
+    setShowForm(true)
+    // Keep existing date selection if any, otherwise clear
+    if (!selectStart || !selectEnd) {
+      setFormStart('')
+      setFormEnd('')
+    }
   }
 
   async function saveRate() {
@@ -223,6 +258,7 @@ export default function PricingManager() {
           end_date: formEnd,
           nightly_rate: Number(formRate),
           label: formLabel,
+          save_as_template: saveAsTemplate,
         }),
       })
       if (res.ok) {
@@ -231,6 +267,7 @@ export default function PricingManager() {
         setSelectStart(null)
         setSelectEnd(null)
         setEditingRate(null)
+        setSaveAsTemplate(false)
       }
     } finally {
       setSaving(false)
@@ -249,6 +286,45 @@ export default function PricingManager() {
       setShowForm(false)
       setSelectStart(null)
       setSelectEnd(null)
+    }
+  }
+
+  async function clearAllRates() {
+    if (!confirm('Delete ALL rate periods? This cannot be undone.')) return
+    const res = await fetch('/api/admin/pricing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'clear_all_rates' }),
+    })
+    if (res.ok) {
+      await fetchPricing()
+      setShowForm(false)
+      setSelectStart(null)
+      setSelectEnd(null)
+    }
+  }
+
+  async function deleteTemplate(label: string) {
+    if (!confirm(`Delete template "${label}"?`)) return
+    const res = await fetch('/api/admin/pricing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete_template', label }),
+    })
+    if (res.ok) {
+      await fetchPricing()
+    }
+  }
+
+  async function clearAllTemplates() {
+    if (!confirm('Delete ALL reusable templates? This cannot be undone.')) return
+    const res = await fetch('/api/admin/pricing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'clear_all_templates' }),
+    })
+    if (res.ok) {
+      await fetchPricing()
     }
   }
 
@@ -390,9 +466,7 @@ export default function PricingManager() {
             gap: '12px',
           }}>
             <div>
-              <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Default Nightly Rate
-              </label>
+              <label style={labelStyle}>Default Nightly Rate</label>
               <div style={{ position: 'relative' }}>
                 <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>$</span>
                 <input
@@ -404,9 +478,7 @@ export default function PricingManager() {
               </div>
             </div>
             <div>
-              <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Cleaning Fee
-              </label>
+              <label style={labelStyle}>Cleaning Fee</label>
               <div style={{ position: 'relative' }}>
                 <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>$</span>
                 <input
@@ -418,9 +490,7 @@ export default function PricingManager() {
               </div>
             </div>
             <div>
-              <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Pet Fee
-              </label>
+              <label style={labelStyle}>Pet Fee</label>
               <div style={{ position: 'relative' }}>
                 <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>$</span>
                 <input
@@ -432,9 +502,7 @@ export default function PricingManager() {
               </div>
             </div>
             <div>
-              <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Min Nights
-              </label>
+              <label style={labelStyle}>Min Nights</label>
               <input
                 type="number"
                 value={editConfig.minNights}
@@ -443,9 +511,7 @@ export default function PricingManager() {
               />
             </div>
             <div>
-              <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Max Guests
-              </label>
+              <label style={labelStyle}>Max Guests</label>
               <input
                 type="number"
                 value={editConfig.maxGuests}
@@ -454,9 +520,7 @@ export default function PricingManager() {
               />
             </div>
             <div>
-              <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                BTC Discount %
-              </label>
+              <label style={labelStyle}>BTC Discount %</label>
               <input
                 type="number"
                 value={editConfig.btcDiscountPercent}
@@ -551,9 +615,7 @@ export default function PricingManager() {
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div>
-                  <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Label
-                  </label>
+                  <label style={labelStyle}>Label</label>
                   <input
                     type="text"
                     placeholder="e.g. Ski Season"
@@ -563,9 +625,7 @@ export default function PricingManager() {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Nightly Rate
-                  </label>
+                  <label style={labelStyle}>Nightly Rate</label>
                   <div style={{ position: 'relative' }}>
                     <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>$</span>
                     <input
@@ -578,9 +638,7 @@ export default function PricingManager() {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                   <div>
-                    <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Start
-                    </label>
+                    <label style={labelStyle}>Start</label>
                     <input
                       type="date"
                       value={formStart}
@@ -592,9 +650,7 @@ export default function PricingManager() {
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      End
-                    </label>
+                    <label style={labelStyle}>End</label>
                     <input
                       type="date"
                       value={formEnd}
@@ -606,17 +662,61 @@ export default function PricingManager() {
                     />
                   </div>
                 </div>
+
+                {/* Save as reusable template toggle */}
+                <div
+                  onClick={() => setSaveAsTemplate(!saveAsTemplate)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    backgroundColor: saveAsTemplate ? 'rgba(183,148,244,0.15)' : 'rgba(255,255,255,0.04)',
+                    border: saveAsTemplate ? '1px solid rgba(183,148,244,0.3)' : '1px solid rgba(255,255,255,0.08)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <div style={{
+                    width: '16px',
+                    height: '16px',
+                    borderRadius: '3px',
+                    border: saveAsTemplate ? '1px solid #b794f4' : '1px solid rgba(255,255,255,0.2)',
+                    backgroundColor: saveAsTemplate ? '#b794f4' : 'transparent',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    transition: 'all 0.15s ease',
+                  }}>
+                    {saveAsTemplate && (
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                        <path d="M2 5L4 7L8 3" stroke="#1a1a2e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', fontWeight: 500, color: saveAsTemplate ? '#b794f4' : 'rgba(255,255,255,0.6)' }}>
+                      Save as reusable template
+                    </div>
+                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '1px' }}>
+                      Template can be applied to other date ranges later
+                    </div>
+                  </div>
+                </div>
+
                 <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                   <button
                     onClick={saveRate}
-                    disabled={saving || !formLabel || !formRate}
+                    disabled={saving || !formLabel || !formRate || !formStart || !formEnd}
                     style={{
                       ...btnBase,
                       flex: 1,
                       justifyContent: 'center',
                       backgroundColor: 'rgba(34,197,94,0.15)',
                       color: '#4ade80',
-                      opacity: (!formLabel || !formRate) ? 0.5 : 1,
+                      opacity: (!formLabel || !formRate || !formStart || !formEnd) ? 0.5 : 1,
                     }}
                   >
                     <Save size={13} />
@@ -628,6 +728,7 @@ export default function PricingManager() {
                       setSelectStart(null)
                       setSelectEnd(null)
                       setEditingRate(null)
+                      setSaveAsTemplate(false)
                     }}
                     style={{
                       ...btnBase,
@@ -654,6 +755,7 @@ export default function PricingManager() {
                 setFormEnd('')
                 setSelectStart(null)
                 setSelectEnd(null)
+                setSaveAsTemplate(false)
               }}
               style={{
                 ...btnBase,
@@ -671,14 +773,104 @@ export default function PricingManager() {
             </button>
           )}
 
+          {/* Reusable Templates */}
+          {templates.length > 0 && (
+            <div style={cardStyle}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: 500, color: '#b794f4', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Bookmark size={14} />
+                  Reusable Templates
+                </h4>
+                <button
+                  onClick={clearAllTemplates}
+                  style={{
+                    ...btnBase,
+                    padding: '3px 8px',
+                    fontSize: '10px',
+                    backgroundColor: 'rgba(220,60,60,0.1)',
+                    color: 'rgba(220,60,60,0.7)',
+                  }}
+                >
+                  Clear All
+                </button>
+              </div>
+              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', margin: '0 0 10px' }}>
+                Click &quot;Apply&quot; to use a template for new dates
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {templates.map((tmpl) => (
+                  <div
+                    key={tmpl.label}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: '6px',
+                      backgroundColor: 'rgba(183,148,244,0.1)',
+                      borderLeft: '3px solid rgba(183,148,244,0.4)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: 500, color: '#b794f4' }}>
+                        {tmpl.label}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>
+                        ${tmpl.nightly_rate}/night
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <button
+                        onClick={() => applyTemplate(tmpl)}
+                        style={{
+                          ...btnBase,
+                          padding: '3px 8px',
+                          fontSize: '10px',
+                          backgroundColor: 'rgba(183,148,244,0.15)',
+                          color: '#b794f4',
+                        }}
+                      >
+                        <Copy size={10} />
+                        Apply
+                      </button>
+                      <button
+                        onClick={() => deleteTemplate(tmpl.label)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
+                      >
+                        <Trash2 size={11} style={{ color: 'rgba(220,60,60,0.6)' }} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Existing rates list */}
           <div style={cardStyle}>
-            <h4 style={{ fontSize: '14px', fontWeight: 500, color: '#fafaf8', margin: '0 0 12px' }}>
-              Seasonal Rates
-            </h4>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h4 style={{ fontSize: '14px', fontWeight: 500, color: '#fafaf8', margin: 0 }}>
+                Active Rates
+              </h4>
+              {rates.length > 0 && (
+                <button
+                  onClick={clearAllRates}
+                  style={{
+                    ...btnBase,
+                    padding: '3px 8px',
+                    fontSize: '10px',
+                    backgroundColor: 'rgba(220,60,60,0.1)',
+                    color: 'rgba(220,60,60,0.7)',
+                  }}
+                >
+                  <Trash2 size={10} />
+                  Clear All
+                </button>
+              )}
+            </div>
             {rates.length === 0 ? (
               <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)' }}>
-                No seasonal rates. All dates use default rate (${config?.defaultNightlyRate}).
+                No active rates. All dates use default rate (${config?.defaultNightlyRate}).
               </p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
