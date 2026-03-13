@@ -4,10 +4,8 @@ import { useState, useEffect, useMemo } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
-  Plus,
   Trash2,
   Save,
-  Edit3,
 } from 'lucide-react'
 
 interface SeasonalRate {
@@ -126,8 +124,6 @@ export default function PricingManager() {
   const [editConfig, setEditConfig] = useState<PricingConfig | null>(null)
   const [configSaving, setConfigSaving] = useState(false)
 
-  // Collapsible active rates list
-  const [ratesExpanded, setRatesExpanded] = useState(false)
 
   async function fetchPricing() {
     setLoading(true)
@@ -183,9 +179,20 @@ export default function PricingManager() {
     setFormEnd(end)
     // Check if there's an existing rate at this date to pre-fill
     const existing = dateRateMap.get(start)
-    setFormRate(existing ? String(existing.rate.nightly_rate) : String(config?.defaultNightlyRate || 500))
-    setFormLabel(existing ? existing.rate.label : '')
-    setEditingRate(null)
+    if (existing) {
+      setFormRate(String(existing.rate.nightly_rate))
+      setFormLabel(existing.rate.label)
+      // If the selection exactly matches an existing entry, edit it in place
+      if (existing.rate.start_date === start && existing.rate.end_date === end) {
+        setEditingRate(existing.rate)
+      } else {
+        setEditingRate(null)
+      }
+    } else {
+      setFormRate(String(config?.defaultNightlyRate || 500))
+      setFormLabel('')
+      setEditingRate(null)
+    }
     setShowForm(true)
   }
 
@@ -209,17 +216,6 @@ export default function PricingManager() {
     setSelectStart(dateStr)
     setSelectEnd(dateStr)
     openForm(dateStr, dateStr)
-  }
-
-  function editExistingRate(rate: SeasonalRate) {
-    setEditingRate(rate)
-    setFormLabel(rate.label)
-    setFormRate(String(rate.nightly_rate))
-    setFormStart(rate.start_date)
-    setFormEnd(rate.end_date)
-    setSelectStart(rate.start_date)
-    setSelectEnd(rate.end_date)
-    setShowForm(true)
   }
 
   async function saveRate() {
@@ -648,79 +644,6 @@ export default function PricingManager() {
               </p>
             </div>
           )}
-
-          {/* Existing rates list (collapsible) */}
-          <div style={cardStyle}>
-            <div
-              onClick={() => setRatesExpanded(!ratesExpanded)}
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-            >
-              <h4 style={{ fontSize: '14px', fontWeight: 500, color: '#fafaf8', margin: 0 }}>
-                Active Rates
-                {rates.length > 0 && (
-                  <span style={{ fontSize: '11px', fontWeight: 400, color: 'rgba(255,255,255,0.4)', marginLeft: '8px' }}>
-                    ({rates.length})
-                  </span>
-                )}
-              </h4>
-              <ChevronRight size={14} style={{
-                color: 'rgba(255,255,255,0.4)',
-                transform: ratesExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                transition: 'transform 0.15s ease',
-              }} />
-            </div>
-            {rates.length === 0 ? (
-              <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', marginTop: '8px' }}>
-                No custom rates. All dates use ${config?.defaultNightlyRate}/night.
-              </p>
-            ) : ratesExpanded ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px' }}>
-                {rates.map((rate, idx) => {
-                  const color = RATE_COLORS[idx % RATE_COLORS.length]
-                  return (
-                    <div
-                      key={rate.id}
-                      style={{
-                        padding: '8px 10px',
-                        borderRadius: '6px',
-                        backgroundColor: color.bg,
-                        borderLeft: `3px solid ${color.border}`,
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <div style={{ fontSize: '12px', fontWeight: 500, color: color.text }}>
-                            {rate.label} — ${rate.nightly_rate}
-                          </div>
-                          <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '1px' }}>
-                            {formatDateShort(rate.start_date)} — {formatDateShort(rate.end_date)}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); editExistingRate(rate) }}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
-                          >
-                            <Edit3 size={11} style={{ color: 'rgba(255,255,255,0.4)' }} />
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); deleteRate(rate.id) }}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
-                          >
-                            <Trash2 size={11} style={{ color: 'rgba(220,60,60,0.6)' }} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginTop: '6px' }}>
-                Tap to expand
-              </p>
-            )}
-          </div>
 
           {/* Legend */}
           <div style={{ padding: '0 4px' }}>
