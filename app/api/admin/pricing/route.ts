@@ -27,9 +27,14 @@ export async function GET() {
     ])
 
     const config: Record<string, string | number> = {}
+    let pricingTemplates: Array<{ label: string; nightly_rate: number }> = []
     if (configRows) {
       for (const row of configRows) {
-        config[row.key] = isNaN(Number(row.value)) ? row.value : Number(row.value)
+        if (row.key === 'pricing_templates') {
+          try { pricingTemplates = JSON.parse(row.value) } catch { /* ignore */ }
+        } else {
+          config[row.key] = isNaN(Number(row.value)) ? row.value : Number(row.value)
+        }
       }
     }
 
@@ -44,6 +49,7 @@ export async function GET() {
         btcDiscountPercent: config.btc_discount_percent || 15,
       },
       seasonalRates: pricing || [],
+      pricingTemplates,
     })
   } catch (err) {
     if (err instanceof Error && err.message === 'Unauthorized') {
@@ -88,12 +94,69 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const supabase = getServiceClient()
 
-    const { id, start_date, end_date, nightly_rate, label } = body
+    // Handle template operations
+    if (body.action === 'save_template') {
+      const { label, nightly_rate } = body
+      if (!label || !nightly_rate) {
+        return NextResponse.json({ error: 'Missing label or rate' }, { status: 400 })
+      }
+      // Get existing templates
+      const { data: existing } = await supabase
+        .from('site_config')
+        .select('value')
+        .eq('key', 'pricing_templates')
+        .single()
+      let templates: Array<{ label: string; nightly_rate: number }> = []
+      if (existing?.value) {
+        try { templates = JSON.parse(existing.value) } catch { /* ignore */ }
+      }
+      // Add new template (avoid duplicates by label)
+      templates = templates.filter(t => t.label !== label)
+      templates.push({ label, nightly_rate: Number(nightly_rate) })
+      await supabase
+        .from('site_config')
+        .upsert({ key: 'pricing_templates', value: JSON.stringify(templates), updated_at: new Date().toISOString() }, { onConflict: 'key' })
+      return NextResponse.json({ success: true, templates })
+    }
+
+    if (body.action === 'delete_template') {
+      const { label } = body
+      const { data: existing } = await supabase
+        .from('site_config')
+        .select('value')
+        .eq('key', 'pricing_templates')
+        .single()
+      let templates: Array<{ label: string; nightly_rate: number }> = []
+      if (existing?.value) {
+        try { templates = JSON.parse(existing.value) } catch { /* ignore */ }
+      }
+      templates = templates.filter(t => t.label !== label)
+      await supabase
+        .from('site_config')
+        .upsert({ key: 'pricing_templates', value: JSON.stringify(templates), updated_at: new Date().toISOString() }, { onConflict: 'key' })
+      return NextResponse.json({ success: true, templates })
+    }
+
+    if (body.action === 'clear_all_templates') {
+      await supabase
+        .from('site_config')
+        .upsert({ key: 'pricing_templates', value: JSON.stringify([]), updated_at: new Date().toISOString() }, { onConflict: 'key' })
+      return NextResponse.json({ success: true, templates: [] })
+    }
+
+    if (body.action === 'clear_all_rates') {
+      const { error } = await supabase.from('pricing').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ success: true })
+    }
+
+    const { id, start_date, end_date, nightly_rate, label, save_as_template } = body
 
     if (!start_date || !end_date || !nightly_rate || !label) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    let rateData
     if (id) {
       // Update existing
       const { data, error } = await supabase
@@ -103,7 +166,7 @@ export async function POST(request: NextRequest) {
         .select()
         .single()
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-      return NextResponse.json(data)
+      rateData = data
     } else {
       // Create new
       const { data, error } = await supabase
@@ -112,8 +175,28 @@ export async function POST(request: NextRequest) {
         .select()
         .single()
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-      return NextResponse.json(data)
+      rateData = data
     }
+
+    // Also save as reusable template if requested
+    if (save_as_template) {
+      const { data: existing } = await supabase
+        .from('site_config')
+        .select('value')
+        .eq('key', 'pricing_templates')
+        .single()
+      let templates: Array<{ label: string; nightly_rate: number }> = []
+      if (existing?.value) {
+        try { templates = JSON.parse(existing.value) } catch { /* ignore */ }
+      }
+      templates = templates.filter(t => t.label !== label)
+      templates.push({ label, nightly_rate: Number(nightly_rate) })
+      await supabase
+        .from('site_config')
+        .upsert({ key: 'pricing_templates', value: JSON.stringify(templates), updated_at: new Date().toISOString() }, { onConflict: 'key' })
+    }
+
+    return NextResponse.json(rateData)
   } catch (err) {
     if (err instanceof Error && err.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
