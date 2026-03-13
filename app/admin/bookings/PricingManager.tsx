@@ -4,13 +4,10 @@ import { useState, useEffect, useMemo } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
-  DollarSign,
   Plus,
   Trash2,
   Save,
   Edit3,
-  Copy,
-  Bookmark,
 } from 'lucide-react'
 
 interface SeasonalRate {
@@ -19,11 +16,6 @@ interface SeasonalRate {
   end_date: string
   nightly_rate: number
   label: string
-}
-
-interface PricingTemplate {
-  label: string
-  nightly_rate: number
 }
 
 interface PricingConfig {
@@ -109,7 +101,6 @@ const labelStyle: React.CSSProperties = {
 export default function PricingManager() {
   const [config, setConfig] = useState<PricingConfig | null>(null)
   const [rates, setRates] = useState<SeasonalRate[]>([])
-  const [templates, setTemplates] = useState<PricingTemplate[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -130,7 +121,6 @@ export default function PricingManager() {
   const [formStart, setFormStart] = useState('')
   const [formEnd, setFormEnd] = useState('')
   const [showForm, setShowForm] = useState(false)
-  const [saveAsTemplate, setSaveAsTemplate] = useState(false)
 
   // Config editing
   const [editConfig, setEditConfig] = useState<PricingConfig | null>(null)
@@ -148,7 +138,6 @@ export default function PricingManager() {
         setConfig(data.config)
         setEditConfig(data.config)
         setRates(data.seasonalRates)
-        setTemplates(data.pricingTemplates || [])
       }
     } finally {
       setLoading(false)
@@ -189,38 +178,37 @@ export default function PricingManager() {
     return set
   }, [selectStart, selectEnd, hoverDate])
 
+  function openForm(start: string, end: string) {
+    setFormStart(start)
+    setFormEnd(end)
+    // Check if there's an existing rate at this date to pre-fill
+    const existing = dateRateMap.get(start)
+    setFormRate(existing ? String(existing.rate.nightly_rate) : String(config?.defaultNightlyRate || 500))
+    setFormLabel(existing ? existing.rate.label : '')
+    setEditingRate(null)
+    setShowForm(true)
+  }
+
   function handleDateClick(dateStr: string) {
     if (!selectStart || selectEnd) {
       // Start new selection
       setSelectStart(dateStr)
       setSelectEnd(null)
+      setShowForm(false)
     } else {
       // Complete selection
       const s = selectStart < dateStr ? selectStart : dateStr
       const e = selectStart < dateStr ? dateStr : selectStart
       setSelectStart(s)
       setSelectEnd(e)
-      // Open form with selected dates
-      setFormStart(s)
-      setFormEnd(e)
-      setFormLabel('')
-      setFormRate(String(config?.defaultNightlyRate || 500))
-      setEditingRate(null)
-      setSaveAsTemplate(false)
-      setShowForm(true)
+      openForm(s, e)
     }
   }
 
   function handleSingleDaySelect(dateStr: string) {
     setSelectStart(dateStr)
     setSelectEnd(dateStr)
-    setFormStart(dateStr)
-    setFormEnd(dateStr)
-    setFormLabel('')
-    setFormRate(String(config?.defaultNightlyRate || 500))
-    setEditingRate(null)
-    setSaveAsTemplate(false)
-    setShowForm(true)
+    openForm(dateStr, dateStr)
   }
 
   function editExistingRate(rate: SeasonalRate) {
@@ -231,25 +219,11 @@ export default function PricingManager() {
     setFormEnd(rate.end_date)
     setSelectStart(rate.start_date)
     setSelectEnd(rate.end_date)
-    setSaveAsTemplate(false)
     setShowForm(true)
-  }
-
-  function applyTemplate(template: PricingTemplate) {
-    setEditingRate(null)
-    setFormLabel(template.label)
-    setFormRate(String(template.nightly_rate))
-    setSaveAsTemplate(false)
-    setShowForm(true)
-    // Keep existing date selection if any, otherwise clear
-    if (!selectStart || !selectEnd) {
-      setFormStart('')
-      setFormEnd('')
-    }
   }
 
   async function saveRate() {
-    if (!formStart || !formEnd || !formRate || !formLabel) return
+    if (!formStart || !formEnd || !formRate) return
     setSaving(true)
     try {
       const res = await fetch('/api/admin/pricing', {
@@ -260,8 +234,7 @@ export default function PricingManager() {
           start_date: formStart,
           end_date: formEnd,
           nightly_rate: Number(formRate),
-          label: formLabel,
-          save_as_template: saveAsTemplate,
+          label: formLabel || `$${formRate}/night`,
         }),
       })
       if (res.ok) {
@@ -270,7 +243,6 @@ export default function PricingManager() {
         setSelectStart(null)
         setSelectEnd(null)
         setEditingRate(null)
-        setSaveAsTemplate(false)
       }
     } finally {
       setSaving(false)
@@ -289,30 +261,6 @@ export default function PricingManager() {
       setShowForm(false)
       setSelectStart(null)
       setSelectEnd(null)
-    }
-  }
-
-  async function deleteTemplate(label: string) {
-    if (!confirm(`Delete template "${label}"?`)) return
-    const res = await fetch('/api/admin/pricing', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'delete_template', label }),
-    })
-    if (res.ok) {
-      await fetchPricing()
-    }
-  }
-
-  async function clearAllTemplates() {
-    if (!confirm('Delete ALL reusable templates? This cannot be undone.')) return
-    const res = await fetch('/api/admin/pricing', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'clear_all_templates' }),
-    })
-    if (res.ok) {
-      await fetchPricing()
     }
   }
 
@@ -534,8 +482,8 @@ export default function PricingManager() {
         </div>
       </div>
 
-      {/* Calendar + Seasonal Rates */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '20px' }}
+      {/* Calendar + Rate Form */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '20px' }}
         className="pricing-layout"
       >
         {/* Calendar */}
@@ -553,7 +501,7 @@ export default function PricingManager() {
           </div>
 
           <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', marginBottom: '12px' }}>
-            Click a date to start selecting, click again to complete range. Double-click for a single day.
+            Click two dates to select a range, or double-click for a single day.
           </p>
 
           {/* Day headers */}
@@ -593,25 +541,18 @@ export default function PricingManager() {
           )}
         </div>
 
-        {/* Rate Form + Existing Rates sidebar */}
+        {/* Sidebar: Rate Form + Rate List */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Rate Form */}
-          {showForm && (
+          {/* Rate Form - shows when dates are selected */}
+          {showForm ? (
             <div style={{ ...cardStyle, border: '1px solid rgba(196,149,106,0.3)' }}>
-              <h4 style={{ fontSize: '14px', fontWeight: 500, color: '#fafaf8', margin: '0 0 12px' }}>
-                {editingRate ? 'Edit Rate Period' : 'New Rate Period'}
+              <h4 style={{ fontSize: '14px', fontWeight: 500, color: '#fafaf8', margin: '0 0 4px' }}>
+                {editingRate ? 'Edit Rate' : 'Set Rate'}
               </h4>
+              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', margin: '0 0 12px' }}>
+                {formatDateShort(formStart)}{formStart !== formEnd ? ` — ${formatDateShort(formEnd)}` : ''}
+              </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div>
-                  <label style={labelStyle}>Label</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Ski Season"
-                    value={formLabel}
-                    onChange={e => setFormLabel(e.target.value)}
-                    style={inputStyle}
-                  />
-                </div>
                 <div>
                   <label style={labelStyle}>Nightly Rate</label>
                   <div style={{ position: 'relative' }}>
@@ -621,8 +562,19 @@ export default function PricingManager() {
                       value={formRate}
                       onChange={e => setFormRate(e.target.value)}
                       style={{ ...inputStyle, paddingLeft: '24px' }}
+                      autoFocus
                     />
                   </div>
+                </div>
+                <div>
+                  <label style={labelStyle}>Label (optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Ski Season"
+                    value={formLabel}
+                    onChange={e => setFormLabel(e.target.value)}
+                    style={inputStyle}
+                  />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                   <div>
@@ -650,65 +602,21 @@ export default function PricingManager() {
                     />
                   </div>
                 </div>
-
-                {/* Save as reusable template toggle */}
-                <div
-                  onClick={() => setSaveAsTemplate(!saveAsTemplate)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '8px 10px',
-                    borderRadius: '6px',
-                    backgroundColor: saveAsTemplate ? 'rgba(183,148,244,0.15)' : 'rgba(255,255,255,0.04)',
-                    border: saveAsTemplate ? '1px solid rgba(183,148,244,0.3)' : '1px solid rgba(255,255,255,0.08)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <div style={{
-                    width: '16px',
-                    height: '16px',
-                    borderRadius: '3px',
-                    border: saveAsTemplate ? '1px solid #b794f4' : '1px solid rgba(255,255,255,0.2)',
-                    backgroundColor: saveAsTemplate ? '#b794f4' : 'transparent',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    transition: 'all 0.15s ease',
-                  }}>
-                    {saveAsTemplate && (
-                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                        <path d="M2 5L4 7L8 3" stroke="#1a1a2e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    )}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '12px', fontWeight: 500, color: saveAsTemplate ? '#b794f4' : 'rgba(255,255,255,0.6)' }}>
-                      Save as reusable template
-                    </div>
-                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '1px' }}>
-                      Template can be applied to other date ranges later
-                    </div>
-                  </div>
-                </div>
-
                 <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                   <button
                     onClick={saveRate}
-                    disabled={saving || !formLabel || !formRate || !formStart || !formEnd}
+                    disabled={saving || !formRate || !formStart || !formEnd}
                     style={{
                       ...btnBase,
                       flex: 1,
                       justifyContent: 'center',
                       backgroundColor: 'rgba(34,197,94,0.15)',
                       color: '#4ade80',
-                      opacity: (!formLabel || !formRate || !formStart || !formEnd) ? 0.5 : 1,
+                      opacity: (!formRate || !formStart || !formEnd) ? 0.5 : 1,
                     }}
                   >
                     <Save size={13} />
-                    {saving ? 'Saving...' : 'Save'}
+                    {saving ? 'Saving...' : 'Save Rate'}
                   </button>
                   <button
                     onClick={() => {
@@ -716,7 +624,6 @@ export default function PricingManager() {
                       setSelectStart(null)
                       setSelectEnd(null)
                       setEditingRate(null)
-                      setSaveAsTemplate(false)
                     }}
                     style={{
                       ...btnBase,
@@ -729,108 +636,16 @@ export default function PricingManager() {
                 </div>
               </div>
             </div>
-          )}
-
-          {/* Add new button */}
-          {!showForm && (
-            <button
-              onClick={() => {
-                setShowForm(true)
-                setEditingRate(null)
-                setFormLabel('')
-                setFormRate(String(config?.defaultNightlyRate || 500))
-                setFormStart('')
-                setFormEnd('')
-                setSelectStart(null)
-                setSelectEnd(null)
-                setSaveAsTemplate(false)
-              }}
-              style={{
-                ...btnBase,
-                justifyContent: 'center',
-                padding: '10px',
-                backgroundColor: 'rgba(196,149,106,0.15)',
-                color: '#c4956a',
-                border: '1px dashed rgba(196,149,106,0.3)',
-                borderRadius: '10px',
-                width: '100%',
-              }}
-            >
-              <Plus size={14} />
-              Add Rate Period
-            </button>
-          )}
-
-          {/* Reusable Templates */}
-          {templates.length > 0 && (
-            <div style={cardStyle}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h4 style={{ fontSize: '14px', fontWeight: 500, color: '#b794f4', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Bookmark size={14} />
-                  Reusable Templates
-                </h4>
-                <button
-                  onClick={clearAllTemplates}
-                  style={{
-                    ...btnBase,
-                    padding: '3px 8px',
-                    fontSize: '10px',
-                    backgroundColor: 'rgba(220,60,60,0.1)',
-                    color: 'rgba(220,60,60,0.7)',
-                  }}
-                >
-                  Clear All
-                </button>
-              </div>
-              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', margin: '0 0 10px' }}>
-                Click &quot;Apply&quot; to use a template for new dates
+          ) : (
+            <div style={{
+              ...cardStyle,
+              textAlign: 'center',
+              padding: '24px 16px',
+              border: '1px dashed rgba(196,149,106,0.2)',
+            }}>
+              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', margin: 0 }}>
+                Select dates on the calendar to set a rate
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {templates.map((tmpl) => (
-                  <div
-                    key={tmpl.label}
-                    style={{
-                      padding: '8px 10px',
-                      borderRadius: '6px',
-                      backgroundColor: 'rgba(183,148,244,0.1)',
-                      borderLeft: '3px solid rgba(183,148,244,0.4)',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: '12px', fontWeight: 500, color: '#b794f4' }}>
-                        {tmpl.label}
-                      </div>
-                      <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>
-                        ${tmpl.nightly_rate}/night
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <button
-                        onClick={() => applyTemplate(tmpl)}
-                        style={{
-                          ...btnBase,
-                          padding: '3px 8px',
-                          fontSize: '10px',
-                          backgroundColor: 'rgba(183,148,244,0.15)',
-                          color: '#b794f4',
-                        }}
-                      >
-                        <Copy size={10} />
-                        Apply
-                      </button>
-                      <button
-                        onClick={() => deleteTemplate(tmpl.label)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
-                      >
-                        <Trash2 size={11} style={{ color: 'rgba(220,60,60,0.6)' }} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
 
@@ -844,7 +659,7 @@ export default function PricingManager() {
                 Active Rates
                 {rates.length > 0 && (
                   <span style={{ fontSize: '11px', fontWeight: 400, color: 'rgba(255,255,255,0.4)', marginLeft: '8px' }}>
-                    ({rates.length} {rates.length === 1 ? 'period' : 'periods'})
+                    ({rates.length})
                   </span>
                 )}
               </h4>
@@ -855,47 +670,44 @@ export default function PricingManager() {
               }} />
             </div>
             {rates.length === 0 ? (
-              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)', marginTop: '10px' }}>
-                No active rates. All dates use default rate (${config?.defaultNightlyRate}).
+              <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', marginTop: '8px' }}>
+                No custom rates. All dates use ${config?.defaultNightlyRate}/night.
               </p>
             ) : ratesExpanded ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px' }}>
                 {rates.map((rate, idx) => {
                   const color = RATE_COLORS[idx % RATE_COLORS.length]
                   return (
                     <div
                       key={rate.id}
                       style={{
-                        padding: '10px 12px',
-                        borderRadius: '8px',
+                        padding: '8px 10px',
+                        borderRadius: '6px',
                         backgroundColor: color.bg,
                         borderLeft: `3px solid ${color.border}`,
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                          <div style={{ fontSize: '13px', fontWeight: 500, color: color.text }}>
-                            {rate.label}
+                          <div style={{ fontSize: '12px', fontWeight: 500, color: color.text }}>
+                            {rate.label} — ${rate.nightly_rate}
                           </div>
-                          <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
+                          <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '1px' }}>
                             {formatDateShort(rate.start_date)} — {formatDateShort(rate.end_date)}
                           </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '16px', fontWeight: 400, color: color.text }}>
-                            ${rate.nightly_rate}
-                          </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <button
-                            onClick={() => editExistingRate(rate)}
+                            onClick={(e) => { e.stopPropagation(); editExistingRate(rate) }}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
                           >
-                            <Edit3 size={12} style={{ color: 'rgba(255,255,255,0.4)' }} />
+                            <Edit3 size={11} style={{ color: 'rgba(255,255,255,0.4)' }} />
                           </button>
                           <button
-                            onClick={() => deleteRate(rate.id)}
+                            onClick={(e) => { e.stopPropagation(); deleteRate(rate.id) }}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
                           >
-                            <Trash2 size={12} style={{ color: 'rgba(220,60,60,0.6)' }} />
+                            <Trash2 size={11} style={{ color: 'rgba(220,60,60,0.6)' }} />
                           </button>
                         </div>
                       </div>
@@ -904,10 +716,8 @@ export default function PricingManager() {
                 })}
               </div>
             ) : (
-              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginTop: '6px', cursor: 'pointer' }}
-                onClick={() => setRatesExpanded(true)}
-              >
-                Click to expand and manage individual rate periods
+              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginTop: '6px' }}>
+                Tap to expand
               </p>
             )}
           </div>
