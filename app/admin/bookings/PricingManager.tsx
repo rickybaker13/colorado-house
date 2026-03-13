@@ -136,6 +136,9 @@ export default function PricingManager() {
   const [editConfig, setEditConfig] = useState<PricingConfig | null>(null)
   const [configSaving, setConfigSaving] = useState(false)
 
+  // Collapsible active rates list
+  const [ratesExpanded, setRatesExpanded] = useState(false)
+
   async function fetchPricing() {
     setLoading(true)
     try {
@@ -280,21 +283,6 @@ export default function PricingManager() {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),
-    })
-    if (res.ok) {
-      await fetchPricing()
-      setShowForm(false)
-      setSelectStart(null)
-      setSelectEnd(null)
-    }
-  }
-
-  async function clearAllRates() {
-    if (!confirm('Delete ALL rate periods? This cannot be undone.')) return
-    const res = await fetch('/api/admin/pricing', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'clear_all_rates' }),
     })
     if (res.ok) {
       await fetchPricing()
@@ -846,34 +834,32 @@ export default function PricingManager() {
             </div>
           )}
 
-          {/* Existing rates list */}
+          {/* Existing rates list (collapsible) */}
           <div style={cardStyle}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <div
+              onClick={() => setRatesExpanded(!ratesExpanded)}
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+            >
               <h4 style={{ fontSize: '14px', fontWeight: 500, color: '#fafaf8', margin: 0 }}>
                 Active Rates
+                {rates.length > 0 && (
+                  <span style={{ fontSize: '11px', fontWeight: 400, color: 'rgba(255,255,255,0.4)', marginLeft: '8px' }}>
+                    ({rates.length} {rates.length === 1 ? 'period' : 'periods'})
+                  </span>
+                )}
               </h4>
-              {rates.length > 0 && (
-                <button
-                  onClick={clearAllRates}
-                  style={{
-                    ...btnBase,
-                    padding: '3px 8px',
-                    fontSize: '10px',
-                    backgroundColor: 'rgba(220,60,60,0.1)',
-                    color: 'rgba(220,60,60,0.7)',
-                  }}
-                >
-                  <Trash2 size={10} />
-                  Clear All
-                </button>
-              )}
+              <ChevronRight size={14} style={{
+                color: 'rgba(255,255,255,0.4)',
+                transform: ratesExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                transition: 'transform 0.15s ease',
+              }} />
             </div>
             {rates.length === 0 ? (
-              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)' }}>
+              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)', marginTop: '10px' }}>
                 No active rates. All dates use default rate (${config?.defaultNightlyRate}).
               </p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            ) : ratesExpanded ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
                 {rates.map((rate, idx) => {
                   const color = RATE_COLORS[idx % RATE_COLORS.length]
                   return (
@@ -917,6 +903,12 @@ export default function PricingManager() {
                   )
                 })}
               </div>
+            ) : (
+              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginTop: '6px', cursor: 'pointer' }}
+                onClick={() => setRatesExpanded(true)}
+              >
+                Click to expand and manage individual rate periods
+              </p>
             )}
           </div>
 

@@ -144,12 +144,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, templates: [] })
     }
 
-    if (body.action === 'clear_all_rates') {
-      const { error } = await supabase.from('pricing').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-      return NextResponse.json({ success: true })
-    }
-
     const { id, start_date, end_date, nightly_rate, label, save_as_template } = body
 
     if (!start_date || !end_date || !nightly_rate || !label) {
