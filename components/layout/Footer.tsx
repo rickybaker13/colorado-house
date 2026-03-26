@@ -14,7 +14,7 @@ export default function Footer() {
           {/* Brand column */}
           <div className="md:col-span-5">
             <h3 className="font-display" style={{ fontSize: '30px', fontWeight: 300, marginBottom: '16px', letterSpacing: '0.03em', color: '#ffffff' }}>
-              Purgatory
+              San Juans
             </h3>
             <p className="font-sans" style={{ fontSize: '15px', color: 'rgba(255,255,255,0.4)', maxWidth: '380px', lineHeight: 1.6, fontWeight: 300 }}>
               A luxury mountain retreat in the San Juan Mountains of Colorado.
