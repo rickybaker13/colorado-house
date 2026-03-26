@@ -53,7 +53,7 @@ export default function Header() {
                 color: scrolled && !isOpen ? '#1a1a2e' : '#ffffff',
               }}
             >
-              Purgatory
+              San Juans
             </span>
           </Link>
 
