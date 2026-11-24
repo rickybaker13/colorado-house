@@ -120,13 +120,13 @@ async function writeCaption(photo: PhotoRow, recentCaptions: string[], directive
     model: MODEL,
     max_tokens: 1200,
     tools: [CAPTION_TOOL],
-    tool_choice: { type: "tool", name: "write_post" },
+    tool_choice: { type: "auto" },
     messages: [
       {
         role: "user",
         content: [
           { type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } },
-          { type: "text", text: prompt },
+          { type: "text", text: `${prompt}\n\nRespond by calling the write_post tool.` },
         ],
       },
     ],
