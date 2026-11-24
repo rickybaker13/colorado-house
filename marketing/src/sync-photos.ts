@@ -136,7 +136,7 @@ async function describe(photo: PhotoRow): Promise<Recorded> {
     model: MODEL,
     max_tokens: 800,
     tools: [RECORD_TOOL],
-    tool_choice: { type: "tool", name: "record_photo" },
+    tool_choice: { type: "auto" },
     messages: [
       {
         role: "user",
@@ -147,7 +147,7 @@ async function describe(photo: PhotoRow): Promise<Recorded> {
             text:
               "This is the owner's own photo, from a vacation rental townhouse at Purgatory Resort near Durango, Colorado, or the surrounding San Juan Mountains." +
               taken +
-              " Describe only what is actually in the photo.",
+              " Describe only what is actually in the photo, by calling the record_photo tool.",
           },
         ],
       },
@@ -162,7 +162,7 @@ async function describePending() {
   const { data: pending, error } = await supabase
     .from("photo_library")
     .select("*")
-    .eq("status", "pending")
+    .in("status", ["pending", "error"]) // errors are retried on the next run
     .limit(MAX_DESCRIBE);
   if (error) throw new Error(`Reading pending photos failed: ${error.message}`);
   console.log(`Describing ${pending?.length ?? 0} photo(s).`);
