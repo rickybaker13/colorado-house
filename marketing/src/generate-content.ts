@@ -35,21 +35,21 @@ export function seasonFor(date: Date): Season {
 }
 
 /**
- * Chooses a photo. Allowed: ready photos from the current or next season (so
- * posts can build interest ahead of a season), or season-neutral shots.
- * Photos used in the last 60 days are skipped; among the rest, higher quality
- * and never-used photos are favored, with some randomness for variety.
+ * Chooses a photo. Photos used in the last 60 days are skipped. In-season
+ * photos (current or next season, or season-neutral) are preferred; if there
+ * are none, any season is allowed and the caption frames it as a look ahead.
+ * Among candidates, higher quality and never-used photos are favored, with
+ * some randomness for variety.
  */
 export function choosePhoto(photos: PhotoRow[], now: Date, rand = Math.random): PhotoRow | null {
   const season = seasonFor(now);
   const next = SEASON_ORDER[(SEASON_ORDER.indexOf(season) + 1) % 4];
   const cutoff = now.getTime() - 60 * 86_400_000;
-  const candidates = photos.filter(
-    (p) =>
-      p.status === "ready" &&
-      (p.season === season || p.season === next || p.season === "any") &&
-      (!p.last_used_at || Date.parse(p.last_used_at) < cutoff),
+  const fresh = photos.filter(
+    (p) => p.status === "ready" && (!p.last_used_at || Date.parse(p.last_used_at) < cutoff),
   );
+  const inSeason = fresh.filter((p) => p.season === season || p.season === next || p.season === "any");
+  const candidates = inSeason.length ? inSeason : fresh;
   if (!candidates.length) return null;
   const scored = candidates
     .map((p) => ({
@@ -143,7 +143,7 @@ async function main() {
   if (error) throw new Error(`Reading photo library failed: ${error.message}`);
   const photo = choosePhoto((photos ?? []) as PhotoRow[], new Date());
   if (!photo) {
-    console.log("No suitable photo available (none ready for this season, or all used in the last 60 days). Add more photos to the Drive folder.");
+    console.log("No photo available: every ready photo was used in the last 60 days. Add more photos to the Drive folder.");
     return;
   }
   console.log(`Photo: ${photo.drive_name} (${photo.subject}, ${photo.season}, q${photo.quality})`);
