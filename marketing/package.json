@@ -8,15 +8,18 @@
     "publish": "tsx src/publish-approved.ts",
     "generate-blog": "tsx src/generate-blog.ts",
     "promote-blog": "tsx src/generate-blog-social.ts",
-    "review": "tsx src/review-queue.ts"
+    "review": "tsx src/review-queue.ts",
+    "sync-photos": "tsx src/sync-photos.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.52.0",
-    "@supabase/supabase-js": "^2.95.3"
+    "@anthropic-ai/sdk": "^1.13.0",
+    "@supabase/supabase-js": "^2.95.3",
+    "google-auth-library": "^11.3.4",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
+    "@types/node": "^22.0.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.7.0",
-    "@types/node": "^22.0.0"
+    "typescript": "^5.7.0"
   }
 }

@@ -52,6 +52,46 @@ async function answerCallback(callbackQueryId: string, text: string) {
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function handlePostDecision(callback: any, action: "post" | "skip", postId: string) {
+  const supabase = getServiceClient();
+  const { data: post } = await supabase
+    .from("social_posts")
+    .select("id, status, content, hashtags")
+    .eq("id", postId)
+    .single();
+
+  if (!post) {
+    await answerCallback(callback.id, "Post not found");
+    return Response.json({ ok: true });
+  }
+  if (post.status !== "draft") {
+    await answerCallback(callback.id, `Already ${post.status}, no change made`);
+    return Response.json({ ok: true });
+  }
+
+  const status = action === "post" ? "approved" : "rejected";
+  await supabase.from("social_posts").update({ status }).eq("id", postId);
+
+  const who = callback.from?.first_name ? ` by ${callback.from.first_name}` : "";
+  const header =
+    action === "post"
+      ? `✅ APPROVED${who}: goes out at the next publishing time (10am or 4pm MT).`
+      : `⏭ SKIPPED${who}: this one won't be posted.`;
+  // Plain text (no parse_mode) so captions with * or _ can't break the edit.
+  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: callback.message.chat.id,
+      message_id: callback.message.message_id,
+      text: `${header}\n\n${post.content}\n\n${post.hashtags ?? ""}`.slice(0, 4000),
+    }),
+  });
+  await answerCallback(callback.id, action === "post" ? "Approved" : "Skipped");
+  return Response.json({ ok: true });
+}
+
 export async function POST(request: NextRequest) {
   // Verify the webhook secret if configured
   if (WEBHOOK_SECRET) {
@@ -95,6 +135,12 @@ export async function POST(request: NextRequest) {
 
     const data = callback.data as string; // e.g. "approve:abc-123" or "deny:abc-123"
     const [action, bookingId] = data.split(":");
+
+    // Instagram drafts: "post:<id>" approves, "skip:<id>" rejects.
+    if (action === "post" || action === "skip") {
+      return handlePostDecision(callback, action, bookingId);
+    }
+
     if (!bookingId || !["approve", "deny"].includes(action)) {
       await answerCallback(callback.id, "Unknown action");
       return Response.json({ ok: true });
