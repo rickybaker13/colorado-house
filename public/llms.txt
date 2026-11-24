@@ -1,0 +1,20 @@
+# Purgatory Townhouse
+
+> Four-bedroom, 3.5-bath mountain townhouse that sleeps 10, at the base of Purgatory Resort near Durango, Colorado. Ski-in/ski-out, on the free shuttle route. Book direct with no platform service fees.
+
+AI agents can check availability, get exact quotes, see photos, and submit booking requests through our MCP server. Every request is reviewed by the owner before it is confirmed.
+
+## For AI agents
+
+- [MCP server](https://skipurgatoryhouse.com/api/mcp): Streamable HTTP, no authentication. Tools: townhouse_check_availability, townhouse_get_calendar, townhouse_get_quote, townhouse_get_property_info, townhouse_get_photos, townhouse_request_booking.
+- Only submit a booking request after the traveler has approved the quote.
+
+## Pages
+
+- [Property details and amenities](https://skipurgatoryhouse.com/property)
+- [Photo gallery](https://skipurgatoryhouse.com/gallery)
+- [Book direct](https://skipurgatoryhouse.com/booking)
+- [Purgatory Resort](https://skipurgatoryhouse.com/purgatory-resort)
+- [Practical info](https://skipurgatoryhouse.com/practical-info)
+- [Hiking](https://skipurgatoryhouse.com/hiking)
+- [Durango](https://skipurgatoryhouse.com/durango)

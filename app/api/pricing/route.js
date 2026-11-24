@@ -20,7 +20,9 @@ export async function GET() {
     const { data: pricing } = await supabase
       .from("pricing")
       .select("start_date, end_date, nightly_rate, label")
-      .order("start_date", { ascending: true });
+      // Newest first, so the booking page's first-match lookup uses the
+      // latest edit when old overlapping rows are still in the table.
+      .order("created_at", { ascending: false });
 
     return Response.json(
       {
