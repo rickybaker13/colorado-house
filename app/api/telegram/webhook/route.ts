@@ -64,9 +64,32 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // We only handle callback_query (inline button presses)
+    // "/chatid" command: replies with this chat's ID so it can be set as
+    // TELEGRAM_CHAT_ID (e.g. after creating a group for both owners).
+    const msg = body.message;
+    const text: string = msg?.text ?? "";
+    if (msg && /^\/chatid(@\w+)?\b/.test(text)) {
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: msg.chat.id,
+          text: `This chat's ID is ${msg.chat.id}. Set TELEGRAM_CHAT_ID to this value to send booking and post alerts here.`,
+        }),
+      });
+      return Response.json({ ok: true });
+    }
+
+    // Otherwise we only handle callback_query (inline button presses)
     const callback = body.callback_query;
     if (!callback) {
+      return Response.json({ ok: true });
+    }
+
+    // Only accept button taps from the configured owners' chat.
+    const allowedChat = process.env.TELEGRAM_CHAT_ID;
+    if (allowedChat && String(callback.message?.chat?.id) !== allowedChat) {
+      await answerCallback(callback.id, "This chat isn't authorized to manage bookings.");
       return Response.json({ ok: true });
     }
 
