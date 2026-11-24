@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.rickybaker13/purgatory-townhouse",
+  "title": "Purgatory Townhouse (Durango, CO) vacation rental",
+  "description": "Check dates, get quotes, see photos, and request to book a 4BR ski-in rental at Purgatory Resort.",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/rickybaker13/colorado-house",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://skipurgatoryhouse.com/api/mcp"
+    }
+  ]
+}

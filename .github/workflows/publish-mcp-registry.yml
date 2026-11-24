@@ -1,0 +1,34 @@
+# ============================================================
+# Publish the booking MCP server to the official MCP Registry
+# ============================================================
+# Run manually (Actions → Publish to MCP Registry → Run workflow)
+# whenever server.json changes. Uses GitHub's OIDC identity, so
+# no keys or secrets are needed.
+# ============================================================
+
+name: Publish to MCP Registry
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # Required for OIDC authentication with the registry
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+
+      - name: Log in to the MCP Registry
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish server.json
+        run: ./mcp-publisher publish
+
+      - name: Show the listing
+        run: curl -s "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.rickybaker13/purgatory-townhouse"
