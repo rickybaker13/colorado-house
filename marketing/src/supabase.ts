@@ -28,6 +28,7 @@ export interface SocialPost {
   published_at?: string;
   ayrshare_post_id?: string;
   created_at?: string;
+  photo_id?: string | null;
 }
 
 export async function insertPost(post: Omit<SocialPost, "id" | "created_at">) {

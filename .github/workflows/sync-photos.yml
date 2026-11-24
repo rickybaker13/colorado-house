@@ -1,0 +1,35 @@
+# ============================================================
+# Daily Photo Sync
+# ============================================================
+# Imports new photos from the owner's Google Drive folder,
+# strips GPS/EXIF, stores them privately in Supabase, and has
+# Claude describe each one once so posts match their photos.
+# ============================================================
+
+name: Sync Photos
+
+on:
+  schedule:
+    # 6am Mountain Time = 1pm UTC (winter)
+    - cron: '7 13 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: marketing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install
+      - name: Sync and describe photos
+        run: npm run sync-photos
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}

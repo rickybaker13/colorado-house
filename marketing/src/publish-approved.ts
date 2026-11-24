@@ -15,6 +15,8 @@ import {
   type SocialPost,
 } from "./supabase.js";
 import { PROPERTY } from "./config.js";
+import { downloadPhoto } from "./photos.js";
+import { supabase } from "./supabase.js";
 
 const UPLOAD_POST_API_KEY = process.env.UPLOAD_POST_API_KEY || "";
 const UPLOAD_POST_PROFILE = process.env.UPLOAD_POST_PROFILE || "";
@@ -94,6 +96,21 @@ async function downloadImage(url: string): Promise<{ blob: Blob; filename: strin
   return { blob, filename };
 }
 
+async function photoFromLibrary(photoId: string): Promise<{ blob: Blob; filename: string }> {
+  const { data, error } = await supabase.from("photo_library").select("storage_path").eq("id", photoId).single();
+  if (error || !data) throw new Error(`Photo ${photoId} not found: ${error?.message}`);
+  const buf = await downloadPhoto(data.storage_path);
+  return { blob: new Blob([new Uint8Array(buf)], { type: "image/jpeg" }), filename: "post-image.jpg" };
+}
+
+async function recordPhotoUse(photoId: string) {
+  const { data } = await supabase.from("photo_library").select("times_used").eq("id", photoId).single();
+  await supabase
+    .from("photo_library")
+    .update({ times_used: (data?.times_used ?? 0) + 1, last_used_at: new Date().toISOString() })
+    .eq("id", photoId);
+}
+
 // Publish a single post via Upload-Post using multipart/form-data
 async function publishPost(post: SocialPost): Promise<string> {
   const platform = PLATFORM_MAP[post.platform];
@@ -104,15 +121,19 @@ async function publishPost(post: SocialPost): Promise<string> {
   const postText = buildPostText(post);
   const imageUrl =
     post.image_url || `${PROPERTY.website}/images/${post.image_filename}`;
+  if (post.photo_id) console.log(`  Photo library id: ${post.photo_id}`);
 
   console.log(`Publishing to ${post.platform}...`);
   console.log(`  Text: ${postText.slice(0, 100)}...`);
   console.log(`  Image: ${imageUrl}`);
 
   try {
-    // Download the image first (Upload-Post requires binary file upload)
+    // Get the image as a file (Upload-Post requires binary upload). Photo-library
+    // posts come from the private bucket; older posts from a URL.
     console.log(`  Downloading image...`);
-    const { blob, filename } = await downloadImage(imageUrl);
+    const { blob, filename } = post.photo_id
+      ? await photoFromLibrary(post.photo_id)
+      : await downloadImage(imageUrl);
     console.log(`  Downloaded ${(blob.size / 1024).toFixed(0)} KB`);
 
     // Build multipart form data
@@ -181,6 +202,7 @@ async function main() {
     try {
       const postId = await publishPost(post);
       await markPublished(post.id!, postId);
+      if (post.photo_id) await recordPhotoUse(post.photo_id);
       published++;
     } catch {
       console.error(`Failed to publish post ${post.id} to ${post.platform}`);
