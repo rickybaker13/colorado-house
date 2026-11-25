@@ -68,9 +68,9 @@ export const PROPERTY = {
       'Up to 2 well-behaved, house-trained pets, $200 pet fee per stay (included in get_quote). All pets must be listed on the reservation; an undisclosed pet is charged $150 per night. No pets on furniture or beds. Extra cleaning or damage from pets is charged. Assistance animals are always allowed.',
     long_term_stays: 'Allowed; stays over 90 nights are arranged with the owner directly',
     booking_process:
-      'Every request is reviewed by the owner before it is confirmed. Payment is a 50% deposit, with the balance due before arrival.',
+      'Every request is reviewed by the owner, who confirms or declines it manually. Nothing is charged until the owner approves. Then 50% of the total is due to confirm, and the remaining 50% is due 30 days before check-in.',
     cancellation_policy:
-      'Full refund if cancelled at least 30 days before check-in (by 4:00 PM, Mountain Time). 50% refund of the nightly rate if cancelled at least 7 days before check-in. No refund if cancelled less than 7 days before check-in.',
+      'Full refund if cancelled within 24 hours of booking. Otherwise: full refund if cancelled 30 or more days before check-in; 50% refund if cancelled 7 to 30 days before check-in; no refund if cancelled less than 7 days before check-in. Check-in date changes may be possible; ask the owner. Same terms as the booking page and the Airbnb listing.',
     house_rules: [
       'Up to 10 overnight guests (more only with the owner\'s approval and for a fee)',
       'No smoking or vaping anywhere in the unit, including e-cigarettes. Evidence of smoking is charged a $500 fee plus any cleaning needed.',

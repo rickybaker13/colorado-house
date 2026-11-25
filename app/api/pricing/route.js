@@ -1,4 +1,5 @@
 import { getServiceClient } from "@/lib/supabase";
+import { enabledMethods } from "@/lib/payments/methods";
 
 export const dynamic = "force-dynamic";
 
@@ -31,8 +32,10 @@ export async function GET() {
         petFee: config.pet_fee || 200,
         maxGuests: config.max_guests || 10,
         maxPets: config.max_pets || 2,
-        minNights: config.min_nights || 2,
+        minNights: config.min_nights || 3,
         btcDiscountPercent: config.btc_discount_percent || 15,
+        // Labels only; addresses and handles are shown after approval.
+        paymentMethods: enabledMethods(config.btc_discount_percent || 15),
         seasonalRates: pricing || [],
       },
       { headers: { "Cache-Control": "no-cache" } }

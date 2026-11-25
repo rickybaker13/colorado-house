@@ -5,7 +5,9 @@ import { sendTelegramNotification } from '@/lib/notify';
 import { getBlockedNights, HOLDING_STATUSES } from './availability';
 import { addDays, stayNights, todayAtProperty, validateStay } from './dates';
 import { logAgentCall } from './log';
-import { bitcoinEnabled, buildQuote, getRentalConfig } from './pricing';
+import { buildQuote, getRentalConfig } from './pricing';
+import { ALL_METHOD_IDS, enabledMethods, isEnabled, methodLabel } from '@/lib/payments/methods';
+import { bookingStatusUrl } from '@/lib/payments/link';
 import { getPhotos, PROPERTY } from './property';
 
 type ToolResult = { content: { type: 'text'; text: string }[]; structuredContent?: Record<string, unknown>; isError?: boolean };
@@ -45,7 +47,6 @@ function instrument<A extends Record<string, unknown>>(
   };
 }
 
-const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 const date = (what: string) => z.string().describe(`${what} date, YYYY-MM-DD (e.g. 2027-01-15)`);
 
@@ -158,7 +159,7 @@ export function createRentalServer(request?: Request): McpServer {
         ...buildQuote(cfg, check_in, check_out, guests, pets),
         available: blocked.length === 0,
         blocked_nights: blocked,
-        payment_methods: bitcoinEnabled() ? ['credit_card', 'bitcoin'] : ['credit_card'],
+        payment_methods: enabledMethods(cfg.btcDiscountPercent).map((m) => m.id),
         next_step:
           blocked.length === 0
             ? 'If the traveler approves this price, call townhouse_request_booking.'
@@ -222,7 +223,8 @@ export function createRentalServer(request?: Request): McpServer {
       description:
         'Submit a booking request for the traveler. Only call this after the traveler has seen the quote and approved sending the request. ' +
         'The owner reviews every request (usually within a day); the dates are held while it is pending. Nothing is charged by this call. ' +
-        'Once approved, the owner contacts the traveler by email to collect the 50% deposit.',
+        'Once approved, the traveler pays the 50% deposit from the private booking page this call returns (card, or the chosen method). ' +
+        'Payment methods available: see payment_methods in townhouse_get_quote.',
       inputSchema: z.strictObject({
         check_in: date('Arrival'),
         check_out: date('Departure'),
@@ -231,7 +233,10 @@ export function createRentalServer(request?: Request): McpServer {
         guest_name: z.string().min(2).max(100).describe("Traveler's full name."),
         guest_email: z.email().describe("Traveler's email; the owner sends confirmation and payment details here."),
         guest_phone: z.string().max(30).optional().describe("Traveler's phone number (optional)."),
-        payment_method: z.enum(['credit_card', 'bitcoin']).default('credit_card').describe('How the traveler plans to pay.'),
+        payment_method: z
+          .enum(ALL_METHOD_IDS as [string, ...string[]])
+          .default('credit_card')
+          .describe('How the traveler plans to pay the deposit. Must be one of payment_methods from townhouse_get_quote. Bitcoin gets a discount.'),
         message: z.string().max(1000).optional().describe('Questions or notes for the owner (arrival time, special requests).'),
         agent_name: z.string().max(100).describe('Name of the AI agent or app submitting this, e.g. "Claude" or "TripPlanner".'),
         traveler_approved: z
@@ -246,8 +251,9 @@ export function createRentalServer(request?: Request): McpServer {
       if (invalid) throw new Rejection(invalid);
       if (a.guests > cfg.maxGuests) throw new Rejection(`The townhouse sleeps up to ${cfg.maxGuests} guests.`);
       if (a.pets > cfg.maxPets) throw new Rejection(`Up to ${cfg.maxPets} pets are allowed.`);
-      if (a.payment_method === 'bitcoin' && !bitcoinEnabled()) {
-        throw new Rejection('Bitcoin payment is not available yet. Use payment_method "credit_card".');
+      if (!isEnabled(a.payment_method)) {
+        const options = enabledMethods(cfg.btcDiscountPercent).map((m) => m.id);
+        throw new Rejection(`Payment method "${a.payment_method}" is not available. Choose one of: ${options.join(', ')}.`);
       }
 
       const { nights, airbnbSynced } = await getBlockedNights({ fresh: true });
@@ -306,11 +312,11 @@ export function createRentalServer(request?: Request): McpServer {
       try {
         await sendTelegramNotification({
           id: booking.id,
-          source_label: `AI agent (${escapeHtml(a.agent_name)})`,
-          guest_name: escapeHtml(a.guest_name),
-          guest_email: escapeHtml(a.guest_email),
-          guest_phone: a.guest_phone ? escapeHtml(a.guest_phone) : null,
-          guest_message: escapeHtml(note),
+          source_label: `AI agent (${a.agent_name})`,
+          guest_name: a.guest_name,
+          guest_email: a.guest_email,
+          guest_phone: a.guest_phone || null,
+          guest_message: note,
           check_in: a.check_in,
           check_out: a.check_out,
           num_guests: a.guests,
@@ -334,9 +340,13 @@ export function createRentalServer(request?: Request): McpServer {
         check_out: a.check_out,
         total: finalTotal,
         deposit_due_after_approval: Math.round(finalTotal * 50) / 100,
+        payment_method: a.payment_method,
+        booking_page: bookingStatusUrl(booking.id),
         what_happens_next:
-          `The owner reviews the request, usually within a day, and emails ${a.guest_email} to confirm and collect the 50% deposit. ` +
-          'The dates are held while the request is pending. Nothing has been charged.',
+          `The owner reviews the request, usually within a day, and emails ${a.guest_email}. ` +
+          `Once approved, the booking page shows how to pay the 50% deposit by ${methodLabel(a.payment_method)} (or by card), and card payments confirm the booking instantly. ` +
+          'The remaining 50% is due 30 days before check-in. The dates are held while the request is pending. Nothing has been charged. ' +
+          'Give the traveler the booking_page link; it is private to them.',
       };
     }),
   );
