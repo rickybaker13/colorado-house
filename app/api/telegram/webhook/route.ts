@@ -2,6 +2,8 @@ import { getServiceClient } from "@/lib/supabase";
 import { NextRequest } from "next/server";
 import { SquareClient, SquareEnvironment } from "square";
 import { randomUUID } from "crypto";
+import { checkStay } from "@/lib/agent/availability";
+import { sendTelegramText } from "@/lib/notify";
 
 /**
  * Telegram Bot Webhook — handles inline button callbacks for booking approvals.
@@ -172,6 +174,23 @@ export async function POST(request: NextRequest) {
     const messageId = callback.message.message_id;
 
     if (action === "approve") {
+      // Last line of defense against double booking: re-check Airbnb (read
+      // fresh) and every other booking right before confirming.
+      const check = await checkStay(booking.check_in, booking.check_out, { excludeBookingId: bookingId });
+      if (check.conflicts.length || !check.airbnbChecked) {
+        const why = check.conflicts.length
+          ? `Conflicts with: ${check.conflicts.join("; ")}`
+          : "The Airbnb calendar could not be read just now, so the dates could not be verified.";
+        await answerCallback(callback.id, check.conflicts.length ? "Not approved: dates conflict" : "Not approved: try again in a minute");
+        await sendTelegramText(
+          `⛔ NOT APPROVED: ${booking.guest_name}, ${booking.check_in} → ${booking.check_out}\n${why}\n` +
+            (check.conflicts.length
+              ? "Tap Deny on the request to release the dates (and refund any deposit)."
+              : "Tap Approve again in a minute.")
+        );
+        return Response.json({ ok: true });
+      }
+
       const newStatus =
         booking.square_payment_id && booking.deposit_amount > 0
           ? "confirmed"

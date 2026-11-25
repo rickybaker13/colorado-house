@@ -1,5 +1,6 @@
 import { getServiceClient } from "@/lib/supabase";
-import { sendTelegramNotification } from "@/lib/notify";
+import { sendTelegramNotification, sendTelegramText } from "@/lib/notify";
+import { checkStay } from "@/lib/agent/availability";
 
 export async function POST(request) {
   try {
@@ -35,17 +36,21 @@ export async function POST(request) {
     }
 
     const supabase = getServiceClient();
-    const { data: conflicts } = await supabase
-      .from("bookings")
-      .select("id, check_in, check_out")
-      .in("status", ["confirmed", "requested", "pending_approval"])
-      .lt("check_in", body.check_out)
-      .gt("check_out", body.check_in);
 
-    if (conflicts && conflicts.length > 0) {
+    // Check against Airbnb (read fresh), manual blocks, and other bookings.
+    const availability = await checkStay(body.check_in, body.check_out);
+    if (availability.conflicts.length || !availability.airbnbChecked) {
+      if (body.square_payment_id) {
+        // Rare race: the card was charged moments ago, then the dates were taken.
+        await sendTelegramText(
+          `⚠️ REFUND NEEDED\n${body.guest_name} (${body.guest_email}) was charged a $${body.deposit_amount} deposit for ${body.check_in} → ${body.check_out}, but the dates were taken before the request was saved.\nSquare payment: ${body.square_payment_id}\nReason: ${availability.conflicts.join("; ") || "Airbnb calendar unreadable"}`
+        ).catch((e) => console.error("Telegram alert failed:", e));
+      }
       return Response.json(
-        { error: "These dates are no longer available. Please select different dates." },
-        { status: 409 }
+        availability.conflicts.length
+          ? { error: "These dates are no longer available. Please select different dates." }
+          : { error: "We couldn't confirm availability just now. Please try again in a few minutes." },
+        { status: availability.conflicts.length ? 409 : 503 }
       );
     }
 

@@ -250,7 +250,10 @@ export function createRentalServer(request?: Request): McpServer {
         throw new Rejection('Bitcoin payment is not available yet. Use payment_method "credit_card".');
       }
 
-      const { nights } = await getBlockedNights();
+      const { nights, airbnbSynced } = await getBlockedNights({ fresh: true });
+      if (!airbnbSynced) {
+        throw new Rejection('The Airbnb calendar could not be checked just now, so the request was not sent. Try again in a few minutes.');
+      }
       const blocked = stayNights(a.check_in, a.check_out).filter((d) => nights.has(d));
       if (blocked.length) {
         throw new Rejection(`These dates are no longer open (blocked: ${blocked.join(', ')}). Use townhouse_get_calendar to find alternatives.`);

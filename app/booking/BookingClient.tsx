@@ -200,6 +200,7 @@ export default function BookingClient() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [calendarStale, setCalendarStale] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [depositPaid, setDepositPaid] = useState<number | null>(null);
 
@@ -214,9 +215,11 @@ export default function BookingClient() {
         const calData = await calRes.json();
         const priceData = await priceRes.json();
         setBlockedDates(new Set(calData.blockedDates || []));
+        setCalendarStale(!calRes.ok || calData.airbnbSynced === false);
         setPricing(priceData);
       } catch (err) {
         console.error('Failed to load booking data', err);
+        setCalendarStale(true);
       } finally {
         setLoading(false);
       }
@@ -687,6 +690,12 @@ export default function BookingClient() {
 
               {/* ── Submit (mobile) ── */}
               <div className="lg:hidden">
+                {calendarStale && (
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 mb-4">
+                    <AlertCircle size={18} className="text-amber-400 shrink-0 mt-0.5" />
+                    <p className="text-sm font-sans text-amber-200">The live calendar didn&rsquo;t fully load, so some booked dates may look open. We check every date again before anything is charged.</p>
+                  </div>
+                )}
                 {submitError && (
                   <div className="flex items-start gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 mb-4">
                     <AlertCircle size={18} className="text-red-400 shrink-0 mt-0.5" />
@@ -768,6 +777,12 @@ export default function BookingClient() {
 
                 {/* Submit (desktop) */}
                 <div className="hidden lg:block space-y-4">
+                  {calendarStale && (
+                    <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 mb-4">
+                      <AlertCircle size={18} className="text-amber-400 shrink-0 mt-0.5" />
+                      <p className="text-sm font-sans text-amber-200">The live calendar didn&rsquo;t fully load, so some booked dates may look open. We check every date again before anything is charged.</p>
+                    </div>
+                  )}
                   {submitError && (
                     <div className="flex items-start gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20">
                       <AlertCircle size={18} className="text-red-400 shrink-0 mt-0.5" />
