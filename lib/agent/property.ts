@@ -1,9 +1,7 @@
-// Property facts served to AI agents. Everything here is taken from what the
-// website already publishes (property page, gallery, resort page). Anything the
-// site does not state is null with a note, so agents never invent it.
-//
-// OWNER TODO: fill in the fields marked null (cancellation policy, house rules)
-// and they will flow to agents automatically.
+// Property facts served to AI agents. Taken from what the website publishes
+// (property page, gallery, resort page) and from the owners' Airbnb listing
+// (airbnb.com/rooms/1205985906587842742), checked Nov 25, 2026: house rules,
+// cancellation policy, amenities, and room layout. Keep the two in sync.
 
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://skipurgatoryhouse.com').replace(/\/$/, '');
 
@@ -12,52 +10,79 @@ export const PROPERTY = {
   website: SITE_URL,
   booking_page: `${SITE_URL}/booking`,
   summary:
-    'Four-bedroom mountain townhouse at the base of Purgatory Resort in the San Juan Mountains near Durango, Colorado. Sleeps 10, with vaulted ceilings, a floor-to-ceiling stone fireplace, a bunk room with an Xbox, and a fully stocked kitchen.',
+    'Four-bedroom, 3.5-bath, 2,790 sq ft alpine-modern townhouse in Tacoma Village, directly across the highway from the Purgatory Resort entrance near Durango, Colorado. Sleeps 10. Private hot tub on the deck facing Engineer Mountain, vaulted great room with a gas fireplace, game room with Xbox and pool/ping pong/air hockey table, and a garage with ski racks and boot warmers. Airbnb Superhost, Guest Favorite, rated 4.97 from 32 reviews.',
   location: {
-    area: 'Base of Purgatory Resort, near Durango, Colorado (San Juan Mountains)',
-    ski_access: 'Ski-in/ski-out, on the free shuttle route',
+    area: 'Tacoma Village, across the highway from the Purgatory Resort entrance, about 25 minutes north of Durango, Colorado (San Juan Mountains)',
+    elevation_ft: 8832,
+    ski_access:
+      'On the free shuttle line: a complimentary, on-demand, door-to-door shuttle to the base area (summoned through the Purgatory app). Many guests also walk to the lift.',
     exact_address: 'Shared with the guest after the booking is confirmed.',
     nearby: [
       'Purgatory Resort: 12 lifts, 105 trails; summer chairlift rides, mountain bike park, and Inferno Mountain Coaster',
       'Purgatory Trail (#511) trailhead a short walk down the street',
-      'Durango, Silverton, the Needle Mountains, and alpine lakes (Ice Lake, Bullion King Lake) for day trips',
+      'Twilight Lake and its hiking trails, a short walk away',
+      'Downtown Durango (restaurants, shops, breweries) and Durango airport, about 25 minutes by car',
+      'Silverton, the Needle Mountains, and alpine lakes (Ice Lake, Bullion King Lake) for day trips',
     ],
   },
-  capacity: { max_guests: 10, bedrooms: 4, bathrooms: 3.5 },
+  capacity: {
+    max_guests: 10,
+    extra_guests: 'More than 10 only with the owner\'s approval and for a fee; ask in the booking request',
+    bedrooms: 4,
+    beds: 7,
+    bathrooms: 3.5,
+    square_feet: 2790,
+    floors: 3,
+  },
   rooms: [
-    { name: 'Great room', detail: 'Vaulted ceilings, floor-to-ceiling stone fireplace, open to kitchen with mountain views' },
-    { name: 'Master suite', detail: 'King bed, mountain-modern decor' },
-    { name: 'Guest bedrooms', detail: 'One with a queen bed; one with green bedding and mountain art' },
-    { name: 'Bunk room', detail: 'Two bunks, sectional sofa, TV, and Xbox' },
-    { name: 'Kitchen', detail: 'Quartz counters, knotty alder cabinets, island seating, fully stocked' },
+    { name: 'First floor', detail: 'Bunk room (two bunk beds, sleeps 4) with sofa, smart TV and Xbox, en-suite bathroom, closet of board games, and a pool/ping pong/air hockey game table. Garage with ski and snowboard racks and boot warmers.' },
+    { name: 'Second floor (main level)', detail: 'Open great room and kitchen with vaulted ceilings, gas fireplace, and large windows; deck with private hot tub, grill, and views of Engineer Mountain and the ski slopes; powder room; laundry room.' },
+    { name: 'Master suite (second floor)', detail: 'King bed, walk-in closet, five-piece bath with glass-walled walk-in shower' },
+    { name: 'Third floor', detail: 'Two bedrooms with a queen bed each, a full bathroom, and a loft with a trundle bed and office area overlooking the great room' },
+    { name: 'Kitchen', detail: 'Fully stocked gourmet kitchen: quartz counters, knotty alder cabinets, island bar seating, stocked spice cabinet' },
   ],
   amenities: {
     views: ['Mountain views', 'Resort views'],
-    kitchen: ['Full kitchen', 'Refrigerator', 'Microwave', 'Dishwasher', 'Stove', 'Oven', 'Cooking basics', 'Dishes and silverware'],
-    laundry_and_linens: ['Free in-unit washer and dryer', 'Towels and bed sheets', 'Egyptian cotton linens', 'Extra pillows and blankets', 'Room-darkening shades', 'Iron', 'Hangers'],
-    bathroom: ['Shampoo', 'Conditioner', 'Body soap', 'Hair dryer', 'Glass-walled walk-in shower'],
-    entertainment: ['TV', 'Xbox', 'Ping pong table', 'Pool table', 'Board games', 'Exercise equipment'],
-    family: ["Pack 'n play / travel crib", "Children's dinnerware"],
+    kitchen: ['Full kitchen', 'Refrigerator', 'Freezer', 'Microwave', 'Dishwasher', 'Stove', 'Oven', 'Toaster', 'Blender', 'Hot water kettle', 'Drip coffee maker', 'Coffee', 'Wine glasses', 'Baking sheet', 'Cooking basics', 'Dishes and silverware', 'Dining table', 'Barbecue utensils'],
+    laundry_and_linens: ['Free in-unit washer and dryer', 'Towels and bed sheets', 'Egyptian cotton linens', 'Extra pillows and blankets', 'Clothing storage', 'Hangers'],
+    bathroom: ['Shampoo', 'Conditioner', 'Body soap', 'Shower gel', 'Hair dryer', 'Cleaning products', 'Hot water', 'Glass-walled walk-in shower'],
+    entertainment: ['Smart TV', 'Xbox', 'Pool / ping pong / air hockey game table', 'Board games', 'Books', 'Yoga mat'],
+    family: ["Pack 'n play / travel crib", "Children's dinnerware", 'Board games'],
     heating: ['Gas fireplace', 'Radiant heating', 'Portable fans'],
-    work: ['WiFi', 'Dedicated workspace'],
-    outdoor: ['Private patio or balcony', 'Outdoor furniture', 'Hammock', 'Charcoal BBQ grill', 'Outdoor dining area'],
-    shared_facilities: ['Hot tub (shared)', 'Gym (shared)', 'Resort access'],
+    work: ['WiFi', 'Dedicated workspace (loft office area)'],
+    outdoor: ['Private hot tub on the deck', 'Private balcony deck with mountain views', 'Gas grill', 'Outdoor furniture', 'Hammock'],
+    ski_and_gear: ['Garage available to guests', 'Ski and snowboard racks', 'Boot warmers'],
+    location_features: ['Lake access (Twilight Lake)', 'Free on-demand ski shuttle', 'Private entrance'],
+    optional_resort_access:
+      'Heated pool, hot tub, and fitness center at the main Purgatory Lodge, available for a 4% amenity fee',
     safety: ['Smoke alarm', 'Carbon monoxide alarm', 'Fire extinguisher'],
-    not_included: ['Air conditioning'],
+    security_camera: 'One outdoor security camera, on the exterior above the garage door, watching who comes and goes. No cameras inside.',
+    not_included: ['Air conditioning (common in the mountains; nights are cool)'],
   },
   policies: {
-    check_in: '4:00 PM, self check-in with smart lock keypad',
-    check_out: '10:00 AM',
+    check_in: 'After 4:00 PM, self check-in with a smart lock keypad and a unique door code',
+    check_out: 'Before 10:00 AM',
     early_luggage_dropoff: 'Available',
-    parking: 'Free, on premises',
-    pets: 'Allowed (limit and fee in get_quote)',
+    parking: 'Free, on premises, including the garage. The HOA does not allow parking on the streets.',
+    pets:
+      'Up to 2 well-behaved, house-trained pets, $200 pet fee per stay (included in get_quote). All pets must be listed on the reservation; an undisclosed pet is charged $150 per night. No pets on furniture or beds. Extra cleaning or damage from pets is charged. Assistance animals are always allowed.',
     long_term_stays: 'Allowed; stays over 90 nights are arranged with the owner directly',
     booking_process:
       'Every request is reviewed by the owner before it is confirmed. Payment is a 50% deposit, with the balance due before arrival.',
-    cancellation_policy: null as string | null,
-    house_rules: null as string | null,
-    unpublished_note:
-      'The owner has not yet published a cancellation policy or full house rules. Do not assume one; tell the traveler the owner will provide it, or include the question in the booking request message.',
+    cancellation_policy:
+      'Full refund if cancelled at least 30 days before check-in (by 4:00 PM, Mountain Time). 50% refund of the nightly rate if cancelled at least 7 days before check-in. No refund if cancelled less than 7 days before check-in.',
+    house_rules: [
+      'Up to 10 overnight guests (more only with the owner\'s approval and for a fee)',
+      'No smoking or vaping anywhere in the unit, including e-cigarettes. Evidence of smoking is charged a $500 fee plus any cleaning needed.',
+      'No parties or events',
+      'Quiet hours 10:00 PM to 7:00 AM',
+      'No commercial photography or filming',
+      'Hot tub: shower before entering; at most 5 people at a time (it overflows and has caused water damage); no soaps, bubbles, or dyes in the water; no food or glass in or around the tub; anyone under 18 must be supervised by an adult; keep the cover on when not in use. Guests use the hot tub at their own risk and pay for extra cleaning caused by misuse.',
+      'Before checkout: start the dishwasher, close the hot tub cover, empty the refrigerator of food, and take out all garbage, including from the bathrooms',
+      'Lock up at checkout by pressing the lock (#) button at the bottom right of the front door keypad',
+      'Tell the owner about any damage during the stay. The cleaner takes inventory between stays, and missing or damaged items are charged.',
+      'HOA rules: no parking on the streets, and no garbage in the construction dumpster',
+    ],
   },
 };
 

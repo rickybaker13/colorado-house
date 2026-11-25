@@ -22,9 +22,9 @@ charged; after approving, email the guest to collect the 50% deposit.
 
 - `app/api/mcp/route.ts`: the endpoint
 - `lib/agent/server.ts`: tool definitions
-- `lib/agent/property.ts`: property facts and photo captions. **Fill in
-  `cancellation_policy` and `house_rules` here**; until then agents are told
-  they are not published.
+- `lib/agent/property.ts`: property facts, house rules, cancellation policy,
+  and photo captions. Taken from the website and the Airbnb listing; update
+  both together when anything changes.
 - `lib/agent/pricing.ts`, `lib/agent/availability.ts`, `lib/agent/dates.ts`: shared logic
 - `lib/notify.js`: Telegram notification (shared with the website booking route)
 
