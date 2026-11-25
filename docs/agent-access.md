@@ -30,8 +30,9 @@ charged; after approving, email the guest to collect the 50% deposit.
 
 ## Settings
 
-- `AGENT_BITCOIN_ENABLED=true` offers Bitcoin (with the BTC discount) to agents.
-  Leave unset until a real receiving address or BTCPay setup exists.
+- Payment methods offered to agents are the ones enabled on the website; see
+  `docs/payments.md`. Bitcoin (with its discount) appears once
+  `PAY_BITCOIN_ADDRESS` or `PAY_BITCOIN_LIGHTNING` is set.
 - Uses the existing `SUPABASE_SERVICE_ROLE_KEY`, `AIRBNB_ICAL_URL`, and Telegram variables.
 
 ## Logging

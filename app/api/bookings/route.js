@@ -1,118 +1,143 @@
+// Website booking requests. Prices are computed here, never taken from the
+// browser. Card requests must carry a Square hold for exactly the 50% deposit.
 import { getServiceClient } from "@/lib/supabase";
 import { sendTelegramNotification, sendTelegramText } from "@/lib/notify";
 import { checkStay } from "@/lib/agent/availability";
+import { isEnabled, normalizeMethod } from "@/lib/payments/methods";
+import { priceStay, StayError } from "@/lib/payments/price";
+import { squareClient } from "@/lib/payments/square";
+import { bookingStatusUrl } from "@/lib/payments/link";
+
+const json = (body, status = 200) => Response.json(body, { status });
+
+async function releaseHold(paymentId) {
+  try {
+    await squareClient.payments.cancel({ paymentId });
+  } catch (e) {
+    console.error("Could not release card hold", paymentId, e);
+    await sendTelegramText(`⚠️ Could not release a card hold automatically. Cancel it in the Square dashboard: ${paymentId}`).catch(() => {});
+  }
+}
 
 export async function POST(request) {
+  let heldPaymentId = null;
   try {
     const body = await request.json();
 
-    const required = [
-      "guest_name", "guest_email", "check_in", "check_out",
-      "num_guests", "nightly_total", "cleaning_fee", "subtotal",
-      "final_total", "payment_method",
-    ];
-
-    for (const field of required) {
+    for (const field of ["guest_name", "guest_email", "check_in", "check_out", "num_guests", "payment_method"]) {
       if (body[field] === undefined || body[field] === null || body[field] === "") {
-        return Response.json({ error: `Missing required field: ${field}` }, { status: 400 });
+        return json({ error: `Missing required field: ${field}` }, 400);
       }
     }
-
-    const checkIn = new Date(body.check_in);
-    const checkOut = new Date(body.check_out);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (checkIn < today) {
-      return Response.json({ error: "Check-in date cannot be in the past" }, { status: 400 });
-    }
-    if (checkOut <= checkIn) {
-      return Response.json({ error: "Check-out must be after check-in" }, { status: 400 });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(body.guest_email))) {
+      return json({ error: "Please enter a valid email address." }, 400);
     }
 
-    const nights = (checkOut - checkIn) / (1000 * 60 * 60 * 24);
-    if (nights < 2) {
-      return Response.json({ error: "Minimum 2-night stay required" }, { status: 400 });
+    const method = normalizeMethod(body.payment_method);
+    if (!method || !isEnabled(method)) {
+      return json({ error: "That payment method isn't available. Please choose another." }, 400);
+    }
+    heldPaymentId = method === "credit_card" ? body.square_payment_id || null : null;
+
+    let priced;
+    try {
+      priced = await priceStay({
+        checkIn: body.check_in,
+        checkOut: body.check_out,
+        guests: Number(body.num_guests),
+        pets: Number(body.num_pets || 0),
+        method,
+      });
+    } catch (e) {
+      if (heldPaymentId) await releaseHold(heldPaymentId);
+      if (e instanceof StayError) return json({ error: e.message }, 400);
+      throw e;
     }
 
-    const supabase = getServiceClient();
+    // Card requests: the hold must exist, be unused, and match the deposit.
+    if (method === "credit_card") {
+      if (!heldPaymentId) return json({ error: "Card details are missing. Please try again." }, 400);
+      const { payment } = await squareClient.payments.get({ paymentId: heldPaymentId });
+      const ok =
+        payment?.status === "APPROVED" &&
+        payment.amountMoney?.amount === priced.depositCents &&
+        payment.amountMoney?.currency === "USD";
+      if (!ok) {
+        console.error("Card hold mismatch", heldPaymentId, payment?.status, payment?.amountMoney);
+        if (payment?.status === "APPROVED") await releaseHold(heldPaymentId);
+        return json({ error: "We couldn't verify the card hold. Nothing was charged. Please try again." }, 400);
+      }
+      const supabase = getServiceClient();
+      const { data: reused } = await supabase.from("bookings").select("id").eq("square_payment_id", heldPaymentId).limit(1);
+      if (reused?.length) return json({ error: "This card hold was already used. Please try again." }, 409);
+    }
 
     // Check against Airbnb (read fresh), manual blocks, and other bookings.
     const availability = await checkStay(body.check_in, body.check_out);
     if (availability.conflicts.length || !availability.airbnbChecked) {
-      if (body.square_payment_id) {
-        // Rare race: the card was charged moments ago, then the dates were taken.
-        await sendTelegramText(
-          `⚠️ REFUND NEEDED\n${body.guest_name} (${body.guest_email}) was charged a $${body.deposit_amount} deposit for ${body.check_in} → ${body.check_out}, but the dates were taken before the request was saved.\nSquare payment: ${body.square_payment_id}\nReason: ${availability.conflicts.join("; ") || "Airbnb calendar unreadable"}`
-        ).catch((e) => console.error("Telegram alert failed:", e));
-      }
-      return Response.json(
+      if (heldPaymentId) await releaseHold(heldPaymentId);
+      return json(
         availability.conflicts.length
-          ? { error: "These dates are no longer available. Please select different dates." }
-          : { error: "We couldn't confirm availability just now. Please try again in a few minutes." },
-        { status: availability.conflicts.length ? 409 : 503 }
+          ? { error: "These dates are no longer available. Nothing was charged. Please select different dates." }
+          : { error: "We couldn't confirm availability just now. Nothing was charged. Please try again in a few minutes." },
+        availability.conflicts.length ? 409 : 503
       );
     }
 
-    // All bookings start as pending_approval — must be approved via Telegram
-    const { data: booking, error } = await supabase
-      .from("bookings")
-      .insert({
-        guest_name: body.guest_name,
-        guest_email: body.guest_email,
-        guest_phone: body.guest_phone || null,
-        guest_message: body.guest_message || null,
-        check_in: body.check_in,
-        check_out: body.check_out,
-        num_guests: body.num_guests,
-        num_pets: body.num_pets || 0,
-        nightly_total: body.nightly_total,
-        cleaning_fee: body.cleaning_fee,
-        pet_fee: body.pet_fee || 0,
-        subtotal: body.subtotal,
-        btc_discount: body.btc_discount || 0,
-        final_total: body.final_total,
-        payment_method: body.payment_method,
-        status: "pending_approval",
-        payment_status: "pending",
-        square_payment_id: body.square_payment_id || null,
-        deposit_amount: body.deposit_amount || 0,
-      })
-      .select()
-      .single();
-
+    const { quote, btcDiscount, finalTotal, deposit } = priced;
+    const supabase = getServiceClient();
+    const row = {
+      guest_name: String(body.guest_name).slice(0, 200),
+      guest_email: String(body.guest_email).slice(0, 200),
+      guest_phone: body.guest_phone ? String(body.guest_phone).slice(0, 50) : null,
+      guest_message: body.guest_message ? String(body.guest_message).slice(0, 2000) : null,
+      check_in: body.check_in,
+      check_out: body.check_out,
+      num_guests: quote.guests,
+      num_pets: quote.pets,
+      nightly_total: quote.nightly_total,
+      cleaning_fee: quote.cleaning_fee,
+      pet_fee: quote.pet_fee,
+      subtotal: quote.subtotal,
+      btc_discount: btcDiscount,
+      final_total: finalTotal,
+      payment_method: method,
+      status: "pending_approval",
+      payment_status: method === "credit_card" ? "deposit_held" : "pending",
+      square_payment_id: heldPaymentId,
+      deposit_amount: method === "credit_card" ? deposit : 0,
+    };
+    const { data: booking, error } = await supabase.from("bookings").insert(row).select().single();
     if (error) {
       console.error("Supabase insert error:", error);
-      return Response.json({ error: "Failed to save booking. Please try again." }, { status: 500 });
+      if (heldPaymentId) await releaseHold(heldPaymentId);
+      return json({ error: "Failed to save booking. Nothing was charged. Please try again." }, 500);
     }
-
-    console.log("Booking created successfully, id:", booking.id, "— sending Telegram notification");
+    heldPaymentId = null; // the booking owns the hold now
 
     try {
-      await sendTelegramNotification({
-        ...body,
-        id: booking.id,
-        square_payment_id: body.square_payment_id || null,
-        deposit_amount: body.deposit_amount || 0,
-      });
+      await sendTelegramNotification({ ...row, id: booking.id });
     } catch (err) {
       console.error("Telegram notification error:", err);
     }
 
-    const hasDeposit = body.square_payment_id && body.deposit_amount > 0;
-
-    return Response.json(
+    return json(
       {
         success: true,
         bookingId: booking.id,
-        message: hasDeposit
-          ? "Your deposit has been processed. We'll confirm your booking shortly after checking availability."
-          : "Booking request received! We'll confirm availability and get back to you shortly.",
+        statusUrl: bookingStatusUrl(booking.id),
+        finalTotal,
+        deposit,
+        message:
+          method === "credit_card"
+            ? "Request received. Your card has a hold for the 50% deposit; it's only charged if the owner approves."
+            : "Request received. Nothing is due until the owner approves; payment details will be on your booking page.",
       },
-      { status: 201 }
+      201
     );
   } catch (error) {
     console.error("Booking API error:", error);
-    return Response.json({ error: "An unexpected error occurred. Please try again." }, { status: 500 });
+    if (heldPaymentId) await releaseHold(heldPaymentId);
+    return json({ error: "An unexpected error occurred. Nothing was charged. Please try again." }, 500);
   }
 }

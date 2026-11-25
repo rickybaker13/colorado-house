@@ -1,5 +1,6 @@
 import { getServiceClient } from '@/lib/supabase';
 import { stayNights } from './dates';
+import { bitcoinEnabled } from '@/lib/payments/methods';
 
 export interface RentalConfig {
   defaultNightlyRate: number;
@@ -36,16 +37,14 @@ export async function getRentalConfig(): Promise<RentalConfig> {
     petFee: cfg.pet_fee || 200,
     maxGuests: cfg.max_guests || 10,
     maxPets: cfg.max_pets || 2,
-    minNights: cfg.min_nights || 2,
+    minNights: cfg.min_nights || 3,
     btcDiscountPercent: cfg.btc_discount_percent || 15,
     seasonalRates: rates.map((r) => ({ start_date: r.start_date, end_date: r.end_date, nightly_rate: Number(r.nightly_rate) })),
   };
 }
 
-/** Bitcoin payment is advertised to agents only once a real receiving setup exists. */
-export function bitcoinEnabled(): boolean {
-  return process.env.AGENT_BITCOIN_ENABLED === 'true';
-}
+// Bitcoin is offered only once a real receiving address is configured.
+export { bitcoinEnabled };
 
 // Airbnb guest service fee the booking page compares against.
 const AIRBNB_SERVICE_FEE_RATE = 0.14;

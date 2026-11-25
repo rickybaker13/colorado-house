@@ -37,6 +37,8 @@ interface PricingConfig {
   minNights: number;
   btcDiscountPercent: number;
   seasonalRates: SeasonalRate[];
+  /** Enabled methods, from the server. Payment details come after approval. */
+  paymentMethods: PaymentMethod[];
 }
 
 interface SeasonalRate {
@@ -46,19 +48,11 @@ interface SeasonalRate {
   label: string;
 }
 
-interface ChainInfo {
-  chain: string;
-  token: string;
-  address: string;
-}
-
 interface PaymentMethod {
   id: string;
   label: string;
   note?: string;
   badge?: string;
-  address: string;
-  chains?: ChainInfo[];
 }
 
 /* ─────────────────────── helpers ─────────────────────── */
@@ -102,32 +96,14 @@ const DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
 const AIRBNB_SERVICE_FEE_RATE = 0.14;
 
-const PAYMENT_METHODS: PaymentMethod[] = [
-  { id: 'credit_card', label: 'Credit / Debit Card', note: '50% deposit charged securely via Square', address: '' },
-  { id: 'bitcoin', label: 'Bitcoin', badge: 'SAVE 15%', address: 'bc1q_YOUR_BTC_ADDRESS_HERE' },
-  {
-    id: 'stablecoin',
-    label: 'Stablecoin',
-    note: 'USDC & USDT',
-    address: '',
-    chains: [
-      { chain: 'Base', token: 'USDC', address: '0x_YOUR_BASE_ADDRESS_HERE' },
-      { chain: 'Ethereum', token: 'USDC / USDT', address: '0x_YOUR_ETH_ADDRESS_HERE' },
-      { chain: 'Arbitrum', token: 'USDC / USDT', address: '0x_YOUR_ARBITRUM_ADDRESS_HERE' },
-      { chain: 'Avalanche', token: 'USDC / USDT', address: '0x_YOUR_AVAX_ADDRESS_HERE' },
-      { chain: 'Solana', token: 'USDC / USDT', address: 'YOUR_SOLANA_ADDRESS_HERE' },
-    ],
-  },
-  { id: 'venmo', label: 'Venmo', address: '@YourVenmoHandle' },
-  { id: 'cashapp', label: 'Cash App', address: '$YourCashAppTag' },
-  { id: 'zelle', label: 'Zelle', address: 'your-email@example.com' },
-];
-
+// Real guest reviews from the Airbnb listing (airbnb.com/rooms/1205985906587842742),
+// lightly trimmed. Overall: 4.97 from 32 reviews, Guest Favorite. Update from Airbnb.
+const AIRBNB_RATING = { score: 4.97, count: 32 };
 const REVIEWS = [
-  { name: 'Sarah & Family', location: 'Dallas, TX', date: 'January 2026', stars: 5, text: 'Absolutely perfect mountain getaway! The townhouse was spotless, spacious, and the kids loved being steps from the ski lift. We\'re already planning our summer trip back.' },
-  { name: 'Mike & Jennifer', location: 'Phoenix, AZ', date: 'December 2025', stars: 5, text: 'The views from this place are unreal. Woke up every morning to snow-capped peaks. Hot tub after skiing was the highlight. Communication with the host was excellent.' },
-  { name: 'The Rodriguez Family', location: 'Albuquerque, NM', date: 'October 2025', stars: 5, text: 'Came for the fall colors and were blown away. The townhouse is even better than the photos. Four bedrooms meant everyone had their own space. Durango is only 25 min away for dinners.' },
-  { name: 'Chris & Group', location: 'Austin, TX', date: 'August 2025', stars: 5, text: 'Brought a group of 8 for a hiking trip. Purgatory in summer is incredible \u2014 wildflowers everywhere, 70\u00b0 days. The place was perfect as a home base. Already recommended to friends.' },
+  { name: 'Kathryne', location: 'United Kingdom', date: 'March 2026', stars: 5, text: 'This place was AMAZING! This was probably the best ABB that we have stayed in so far. It had just about anything we needed. Boot dryers in the garage were awesome and the ski holders on the wall kept our skis out of the way. Private hot tub on the balcony with a beautiful view of the mountain for our old, tired selves after a long day of skiing.' },
+  { name: 'Milton', location: 'San Antonio, Texas', date: 'January 2026', stars: 5, text: 'We stayed with two families (4 adults and 6 kids), and this Airbnb was absolutely perfect for our trip. The house is beautiful, very spacious, and extremely functional. The location was super convenient, and the view of the slopes was amazing. We will definitely be coming back!' },
+  { name: 'Mikey', location: 'Santa Fe, New Mexico', date: 'February 2026', stars: 5, text: 'Fantastic location and an excellent property overall. The shuttle service to and from the ski hill was efficient and seamless, making access effortless. Stephanie was highly responsive and provided clear, thorough information about every aspect of the stay. I would gladly choose to stay here again.' },
+  { name: 'Courtney', location: 'Airbnb guest', date: 'March 2026', stars: 5, text: 'The house was great! Clean, great view, very spacious which was great so the kids could play downstairs while the adults were upstairs. So close to Purgatory. We would definitely recommend this place.' },
 ];
 
 /* ────────────────── copy‑to‑clipboard ────────────────── */
@@ -203,6 +179,7 @@ export default function BookingClient() {
   const [calendarStale, setCalendarStale] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [depositPaid, setDepositPaid] = useState<number | null>(null);
+  const [statusUrl, setStatusUrl] = useState<string | null>(null);
 
   /* ── fetch data ── */
   useEffect(() => {
@@ -233,10 +210,13 @@ export default function BookingClient() {
     petFee: 200,
     maxGuests: 10,
     maxPets: 2,
-    minNights: 2,
+    minNights: 3,
     btcDiscountPercent: 15,
     seasonalRates: [],
+    paymentMethods: [] as PaymentMethod[],
   };
+  const methods = cfg.paymentMethods ?? [];
+  const btcEnabled = methods.some((m) => m.id === 'bitcoin');
 
   /* ── calendar helpers ── */
   const isBlocked = useCallback((d: Date) => blockedDates.has(fmt(d)), [blockedDates]);
@@ -305,6 +285,11 @@ export default function BookingClient() {
   const btcTotal = subtotal - btcDiscount;
   const totalNights = checkIn && checkOut ? Math.round((checkOut.getTime() - checkIn.getTime()) / 86400000) : 0;
 
+  // Keep the selection on an enabled method once the list loads.
+  useEffect(() => {
+    if (methods.length && !methods.some((m) => m.id === paymentMethod)) setPaymentMethod(methods[0].id);
+  }, [methods, paymentMethod]);
+
   /* ── submit ── */
   const canSubmit = checkIn && checkOut && name.trim() && email.trim() && !submitting;
 
@@ -314,7 +299,6 @@ export default function BookingClient() {
     setSubmitting(true);
     setSubmitError('');
 
-    const selectedMethod = PAYMENT_METHODS.find(p => p.id === paymentMethod);
     const isBtc = paymentMethod === 'bitcoin';
     const isCard = paymentMethod === 'credit_card';
     const finalTotal = isBtc ? btcTotal : subtotal;
@@ -345,7 +329,8 @@ export default function BookingClient() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             sourceId: tokenResult.token,
-            amount: finalTotal,
+            guests,
+            pets,
             guestName: name.trim(),
             guestEmail: email.trim(),
             checkIn: fmt(checkIn),
@@ -383,7 +368,7 @@ export default function BookingClient() {
           subtotal,
           btc_discount: isBtc ? btcDiscount : 0,
           final_total: finalTotal,
-          payment_method: selectedMethod?.label.toLowerCase() ?? paymentMethod,
+          payment_method: paymentMethod,
           // Square payment fields (only present for card payments)
           ...(squarePaymentId && {
             square_payment_id: squarePaymentId,
@@ -398,6 +383,7 @@ export default function BookingClient() {
         return;
       }
       setBookingId(data.bookingId);
+      setStatusUrl(data.statusUrl ?? null);
       if (depositAmount > 0) setDepositPaid(depositAmount);
       setSubmitted(true);
     } catch {
@@ -475,13 +461,19 @@ export default function BookingClient() {
             </h1>
             <p className="font-sans text-body-lg text-white/60 mb-10">
               {depositPaid
-                ? `Your 50% deposit of $${depositPaid.toLocaleString()} has been charged. We're reviewing your request and will confirm shortly.`
-                : "We're reviewing your request and will confirm availability shortly."}
+                ? `Your card has a hold for the 50% deposit ($${depositPaid.toLocaleString()}). It's only charged if we approve your request; if we can't, the hold is released.`
+                : "We're reviewing your request. Nothing is due until it's approved; then your booking page shows how to pay."}
             </p>
             <div className="bg-stone/10 rounded-xl p-4 mb-6 border border-stone/20">
               <p className="font-sans text-sm text-stone-light">
-                All bookings are reviewed to ensure availability with our calendar. You&apos;ll receive a confirmation email once approved.
+                Every request is reviewed by the owners, usually within a day. Your booking page shows the current status and, once approved, how to pay.
               </p>
+              {statusUrl && (
+                <div className="flex items-center justify-center gap-2 mt-3">
+                  <a href={statusUrl} className="text-sm font-sans text-stone underline underline-offset-4">Open your booking page</a>
+                  <CopyButton text={statusUrl} />
+                </div>
+              )}
             </div>
 
             <div className="bg-charcoal-light rounded-2xl p-8 text-left space-y-4 border border-white/5">
@@ -503,7 +495,7 @@ export default function BookingClient() {
               </div>
               <div className="flex justify-between text-sm font-sans">
                 <span className="text-white/50">Payment</span>
-                <span className="text-snow">{PAYMENT_METHODS.find(p => p.id === paymentMethod)?.label}</span>
+                <span className="text-snow">{methods.find(p => p.id === paymentMethod)?.label ?? paymentMethod}</span>
               </div>
               <div className="border-t border-white/10 pt-4 flex justify-between">
                 <span className="font-sans font-medium text-snow">Total</span>
@@ -512,7 +504,7 @@ export default function BookingClient() {
               {depositPaid && (
                 <>
                   <div className="flex justify-between text-sm font-sans">
-                    <span className="text-green-400 font-medium">Deposit Paid</span>
+                    <span className="text-green-400 font-medium">Deposit on hold</span>
                     <span className="text-green-400 font-medium">${depositPaid.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm font-sans">
@@ -523,7 +515,7 @@ export default function BookingClient() {
               )}
             </div>
 
-            <p className="text-sm text-white/40 mt-6 font-sans">We&apos;ll send a confirmation to {email} once your booking is approved</p>
+            <p className="text-sm text-white/40 mt-6 font-sans">We&apos;ll email {email} when your request is approved. Bookmark your booking page to check its status.</p>
           </motion.div>
         </div>
       </div>
@@ -543,10 +535,10 @@ export default function BookingClient() {
         <div className="max-w-5xl mx-auto px-4 py-5 flex flex-wrap justify-center gap-x-8 gap-y-3">
           {[
             'No Airbnb service fees',
-            'Save 15% with Bitcoin',
+            btcEnabled ? `Save ${cfg.btcDiscountPercent}% with Bitcoin` : null,
             'Direct owner communication',
             'Flexible payment options',
-          ].map((b) => (
+          ].filter((b): b is string => Boolean(b)).map((b) => (
             <span key={b} className="flex items-center gap-2 text-sm font-sans text-stone-light">
               <Check size={14} className="text-stone" />
               {b}
@@ -607,7 +599,10 @@ export default function BookingClient() {
               <section className="bg-charcoal-light rounded-2xl p-6 md:p-8 border border-white/5">
                 <h3 className="font-display text-xl text-snow mb-5">Payment Method</h3>
                 <div className="space-y-3">
-                  {PAYMENT_METHODS.map((pm) => {
+                  {methods.length === 0 && (
+                    <p className="text-sm font-sans text-white/50">Loading payment options…</p>
+                  )}
+                  {methods.map((pm) => {
                     const sel = paymentMethod === pm.id;
                     return (
                       <div key={pm.id}>
@@ -633,29 +628,11 @@ export default function BookingClient() {
                               <SquareCardForm ref={squareCardRef} disabled={submitting} />
                             </motion.div>
                           )}
-                          {sel && pm.address && !pm.chains && pm.id !== 'credit_card' && (
+                          {sel && pm.id !== 'credit_card' && (
                             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
-                              <div className="flex items-center gap-2 mt-2 ml-12 px-4 py-2.5 bg-white/5 rounded-lg">
-                                <code className="text-xs font-mono text-stone-light break-all flex-1">{pm.address}</code>
-                                <CopyButton text={pm.address} />
-                              </div>
-                            </motion.div>
-                          )}
-                          {sel && pm.chains && (
-                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
-                              <div className="mt-2 ml-12 space-y-2">
-                                {pm.chains.map((c) => (
-                                  <div key={c.chain} className="px-4 py-2.5 bg-white/5 rounded-lg">
-                                    <div className="flex items-center justify-between mb-1">
-                                      <span className="text-xs font-sans text-white/50">{c.chain} <span className="text-white/30">&middot; {c.token}</span></span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <code className="text-xs font-mono text-stone-light break-all flex-1">{c.address}</code>
-                                      <CopyButton text={c.address} />
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
+                              <p className="mt-2 ml-12 px-4 py-2.5 bg-white/5 rounded-lg text-xs font-sans text-white/60">
+                                Nothing is due now. Once the owners approve your request, your booking page shows where to send the 50% deposit{pm.id === 'bitcoin' ? ` (with your ${cfg.btcDiscountPercent}% Bitcoin discount)` : ''}. You can also pay by card from that page.
+                              </p>
                             </motion.div>
                           )}
                         </AnimatePresence>
@@ -759,7 +736,7 @@ export default function BookingClient() {
                       </div>
 
                       {/* BTC bonus */}
-                      <div className="bg-stone/10 rounded-xl p-4 space-y-2">
+                      {btcEnabled && <div className="bg-stone/10 rounded-xl p-4 space-y-2">
                         <div className="flex justify-between items-baseline">
                           <span className="text-stone-light text-xs font-medium">Pay with Bitcoin</span>
                           <span className="text-stone font-semibold">${btcTotal.toLocaleString()}</span>
@@ -768,7 +745,7 @@ export default function BookingClient() {
                           <span className="text-white/30 text-xs">Total savings vs Airbnb</span>
                           <span className="text-green-400 text-xs font-semibold">${(airbnbTotal - btcTotal).toLocaleString()}</span>
                         </div>
-                      </div>
+                      </div>}
                     </div>
                   ) : (
                     <p className="text-sm text-white/30 font-sans text-center py-4">Select dates to see pricing</p>
@@ -905,7 +882,12 @@ export default function BookingClient() {
 
             {/* ── Guest Reviews ── */}
             <section>
-              <h2 className="font-display text-display-md text-snow mb-6">Guest Reviews</h2>
+              <h2 className="font-display text-display-md text-snow mb-2">Guest Reviews</h2>
+              <p className="font-sans text-sm text-white/50 mb-6">
+                <Star size={14} className="inline text-stone fill-stone -mt-0.5" /> {AIRBNB_RATING.score} from {AIRBNB_RATING.count} reviews on{' '}
+                <a href="https://www.airbnb.com/rooms/1205985906587842742" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-stone-light">Airbnb</a>
+                {' '}&middot; Guest Favorite &middot; Superhost
+              </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {REVIEWS.map((r) => (
                   <div key={r.name} className="bg-charcoal-light rounded-2xl p-6 border border-white/5">
@@ -917,7 +899,7 @@ export default function BookingClient() {
                     <p className="font-sans text-sm text-white/70 leading-relaxed mb-4">&ldquo;{r.text}&rdquo;</p>
                     <div className="font-sans">
                       <p className="text-sm text-snow font-medium">{r.name}</p>
-                      <p className="text-xs text-white/40">{r.location} &middot; {r.date}</p>
+                      <p className="text-xs text-white/40">{r.location} &middot; {r.date} &middot; via Airbnb</p>
                     </div>
                   </div>
                 ))}
