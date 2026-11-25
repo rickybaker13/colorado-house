@@ -7,8 +7,9 @@ import { addDays, stayNights, todayAtProperty, validateStay } from './dates';
 import { logAgentCall } from './log';
 import { buildQuote, getRentalConfig } from './pricing';
 import { ALL_METHOD_IDS, enabledMethods, isEnabled, methodLabel } from '@/lib/payments/methods';
-import { bookingStatusUrl } from '@/lib/payments/link';
-import { getPhotos, PROPERTY } from './property';
+import { bookingStatusUrl, bookingToken } from '@/lib/payments/link';
+import { lightningEnabled } from '@/lib/payments/lightning';
+import { getPhotos, PROPERTY, SITE_URL } from './property';
 
 type ToolResult = { content: { type: 'text'; text: string }[]; structuredContent?: Record<string, unknown>; isError?: boolean };
 
@@ -342,6 +343,13 @@ export function createRentalServer(request?: Request): McpServer {
         deposit_due_after_approval: Math.round(finalTotal * 50) / 100,
         payment_method: a.payment_method,
         booking_page: bookingStatusUrl(booking.id),
+        ...(lightningEnabled()
+          ? {
+              lightning_l402_deposit_url: `${SITE_URL}/api/l402/deposit/${booking.id}?t=${bookingToken(booking.id)}`,
+              lightning_note:
+                'After the owner approves, an agent with a Lightning wallet can pay the deposit itself: GET this URL, pay the invoice in the 402 response, and retry with "Authorization: L402 <macaroon>:<preimage>". Before approval it returns 409.',
+            }
+          : {}),
         what_happens_next:
           `The owner reviews the request, usually within a day, and emails ${a.guest_email}. ` +
           `Once approved, the booking page shows how to pay the 50% deposit by ${methodLabel(a.payment_method)} (or by card), and card payments confirm the booking instantly. ` +

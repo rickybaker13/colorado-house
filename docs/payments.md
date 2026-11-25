@@ -27,7 +27,8 @@ their request.
 | Method | Variable(s) | Example |
 |---|---|---|
 | Card | `SQUARE_ACCESS_TOKEN`, `SQUARE_LOCATION_ID`, `NEXT_PUBLIC_SQUARE_APP_ID`, `NEXT_PUBLIC_SQUARE_LOCATION_ID`, `SQUARE_ENVIRONMENT=production` | (already set) |
-| Bitcoin | `PAY_BITCOIN_ADDRESS` and/or `PAY_BITCOIN_LIGHTNING` | `bc1q…` / `you@getalby.com` |
+| Bitcoin (on-chain) | `PAY_BITCOIN_ADDRESS` (optional `PAY_BITCOIN_LIGHTNING` shows a Lightning address as text) | `bc1q…` |
+| Lightning + L402 | `PAY_LIGHTNING_NWC_URL`: a **receive-only** Nostr Wallet Connect secret (create invoices, look up invoices, read node info; no send permission) | `nostr+walletconnect://…` |
 | Stablecoin | `PAY_STABLECOIN_EVM_ADDRESS` (one address works on all EVM chains), optional `PAY_STABLECOIN_EVM_CHAINS` (default `Base,Ethereum,Arbitrum`), and/or `PAY_STABLECOIN_SOLANA_ADDRESS` | `0x…` |
 | Venmo | `PAY_VENMO_HANDLE` | `@Your-Handle` |
 | Cash App | `PAY_CASHAPP_TAG` | `$YourTag` |
@@ -41,3 +42,20 @@ The booking page shows the guest an approximate BTC amount at the current rate.
 same address, visible on-chain. A BTCPay Server (which can run on an Umbrel) gives
 each guest a fresh address; it can be added later without changing the rest of
 this flow.
+
+## Lightning and L402
+
+With `PAY_LIGHTNING_NWC_URL` set (e.g. an Alby Hub connection on the Umbrel):
+
+- **Booking page:** for an approved Bitcoin booking, "Show Lightning invoice" makes a
+  15-minute invoice for the deposit at the current BTC/USD rate. The page polls and
+  confirms the booking itself when it's paid (Telegram gets "⚡ DEPOSIT RECEIVED").
+- **L402 for agents:** `GET /api/l402/deposit/<bookingId>?t=<token>` returns
+  `402 Payment Required` with `WWW-Authenticate: L402 macaroon="…", invoice="…"`.
+  After paying, the agent retries with `Authorization: L402 <macaroon>:<preimage>`;
+  the server checks the preimage against the payment hash, confirms the amount
+  with the wallet, and confirms the booking. The "macaroon" is an HMAC-signed
+  token committing to the booking, payment hash, amount and expiry (opaque to
+  clients). `townhouse_request_booking` returns this URL as
+  `lightning_l402_deposit_url`. Before approval it returns 409.
+- The wallet connection can only create and look up invoices, never spend.

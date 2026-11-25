@@ -8,6 +8,7 @@ AI agents can check availability, get exact quotes, see photos, and submit booki
 
 - [MCP server](https://skipurgatoryhouse.com/api/mcp): Streamable HTTP, no authentication. Tools: townhouse_check_availability, townhouse_get_calendar, townhouse_get_quote, townhouse_get_property_info, townhouse_get_photos, townhouse_request_booking.
 - Only submit a booking request after the traveler has approved the quote.
+- Payment: once the owner approves, the deposit is paid from the private booking page returned by townhouse_request_booking (card, Bitcoin, stablecoins, Venmo, Cash App, or Zelle, as enabled). Agents with a Lightning wallet can pay it directly over L402 (HTTP 402) using the lightning_l402_deposit_url in that response.
 
 ## Pages
 

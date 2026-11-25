@@ -7,6 +7,8 @@ import { verifyBookingToken } from '@/lib/payments/link';
 import { cardEnabled, isEnabled, methodDetails, methodLabel, normalizeMethod } from '@/lib/payments/methods';
 import { addDays } from '@/lib/agent/dates';
 import PayByCard from './PayByCard';
+import PayByLightning from './PayByLightning';
+import { btcUsd, lightningEnabled } from '@/lib/payments/lightning';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Your booking | Purgatory Townhouse', robots: { index: false, follow: false } };
@@ -14,17 +16,6 @@ export const metadata: Metadata = { title: 'Your booking | Purgatory Townhouse',
 const usd = (n: number) => `$${n.toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
 const longDate = (s: string) =>
   new Date(`${s}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
-
-async function btcPrice(): Promise<number | null> {
-  try {
-    const res = await fetch('https://api.coinbase.com/v2/prices/BTC-USD/spot', { next: { revalidate: 60 } });
-    const j = await res.json();
-    const n = Number(j?.data?.amount);
-    return n > 0 ? n : null;
-  } catch {
-    return null;
-  }
-}
 
 const STATUS: Record<string, { title: string; body: string; tone: string }> = {
   pending_approval: { title: 'Request received', body: 'The owners are reviewing your request, usually within a day. Your dates are held while they decide.', tone: 'text-stone-light' },
@@ -56,7 +47,8 @@ export default async function BookingStatusPage({
   const st = STATUS[b.status] ?? { title: b.status, body: '', tone: 'text-snow' };
   const awaitingDeposit = b.status === 'requested' && b.payment_status === 'pending';
   const details = awaitingDeposit && method && method !== 'credit_card' && isEnabled(method) ? methodDetails(method) : [];
-  const price = method === 'bitcoin' && awaitingDeposit ? await btcPrice() : null;
+  const price = method === 'bitcoin' && awaitingDeposit ? await btcUsd() : null;
+  const showLightning = awaitingDeposit && method === 'bitcoin' && lightningEnabled();
   const reference = `Purgatory ${id.slice(0, 8)}`;
 
   return (
@@ -85,9 +77,17 @@ export default async function BookingStatusPage({
           </div>
         </section>
 
+        {showLightning && (
+          <section className="bg-charcoal-light rounded-2xl p-6 border border-amber-400/20 space-y-3 text-sm">
+            <h2 className="font-display text-xl text-snow">Pay the deposit with Lightning ⚡</h2>
+            <p className="text-white/60">Fastest option: pay {usd(deposit)} in bitcoin from any Lightning wallet. Your booking confirms the moment it arrives.</p>
+            <PayByLightning bookingId={id} token={t!} />
+          </section>
+        )}
+
         {awaitingDeposit && details.length > 0 && (
           <section className="bg-charcoal-light rounded-2xl p-6 border border-amber-400/20 space-y-4 text-sm">
-            <h2 className="font-display text-xl text-snow">Pay the deposit by {methodLabel(b.payment_method)}</h2>
+            <h2 className="font-display text-xl text-snow">{showLightning ? 'Or send bitcoin on-chain' : `Pay the deposit by ${methodLabel(b.payment_method)}`}</h2>
             <p className="text-white/70">
               Send <strong className="text-snow">{usd(deposit)}</strong>
               {method === 'bitcoin' && price ? (

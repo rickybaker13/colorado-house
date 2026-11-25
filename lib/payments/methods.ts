@@ -26,7 +26,7 @@ export function cardEnabled(): boolean {
 }
 
 export function bitcoinEnabled(): boolean {
-  return Boolean(env('PAY_BITCOIN_ADDRESS') || env('PAY_BITCOIN_LIGHTNING'));
+  return Boolean(env('PAY_BITCOIN_ADDRESS') || env('PAY_BITCOIN_LIGHTNING') || env('PAY_LIGHTNING_NWC_URL'));
 }
 
 function stablecoinChains(): MethodDetail[] {

@@ -329,7 +329,7 @@ export default function BookingsClient() {
                     </button>
                   </>
                 )}
-                {booking.status === 'confirmed' && (
+                {(booking.status === 'confirmed' || booking.status === 'requested') && (
                   <button
                     onClick={() => updateStatus(booking.id, 'cancelled')}
                     disabled={actionLoading === booking.id}

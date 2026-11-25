@@ -96,11 +96,14 @@ const DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
 const AIRBNB_SERVICE_FEE_RATE = 0.14;
 
+// Real guest reviews from the Airbnb listing (airbnb.com/rooms/1205985906587842742),
+// lightly trimmed. Overall: 4.97 from 32 reviews, Guest Favorite. Update from Airbnb.
+const AIRBNB_RATING = { score: 4.97, count: 32 };
 const REVIEWS = [
-  { name: 'Sarah & Family', location: 'Dallas, TX', date: 'January 2026', stars: 5, text: 'Absolutely perfect mountain getaway! The townhouse was spotless, spacious, and the kids loved being steps from the ski lift. We\'re already planning our summer trip back.' },
-  { name: 'Mike & Jennifer', location: 'Phoenix, AZ', date: 'December 2025', stars: 5, text: 'The views from this place are unreal. Woke up every morning to snow-capped peaks. Hot tub after skiing was the highlight. Communication with the host was excellent.' },
-  { name: 'The Rodriguez Family', location: 'Albuquerque, NM', date: 'October 2025', stars: 5, text: 'Came for the fall colors and were blown away. The townhouse is even better than the photos. Four bedrooms meant everyone had their own space. Durango is only 25 min away for dinners.' },
-  { name: 'Chris & Group', location: 'Austin, TX', date: 'August 2025', stars: 5, text: 'Brought a group of 8 for a hiking trip. Purgatory in summer is incredible \u2014 wildflowers everywhere, 70\u00b0 days. The place was perfect as a home base. Already recommended to friends.' },
+  { name: 'Kathryne', location: 'United Kingdom', date: 'March 2026', stars: 5, text: 'This place was AMAZING! This was probably the best ABB that we have stayed in so far. It had just about anything we needed. Boot dryers in the garage were awesome and the ski holders on the wall kept our skis out of the way. Private hot tub on the balcony with a beautiful view of the mountain for our old, tired selves after a long day of skiing.' },
+  { name: 'Milton', location: 'San Antonio, Texas', date: 'January 2026', stars: 5, text: 'We stayed with two families (4 adults and 6 kids), and this Airbnb was absolutely perfect for our trip. The house is beautiful, very spacious, and extremely functional. The location was super convenient, and the view of the slopes was amazing. We will definitely be coming back!' },
+  { name: 'Mikey', location: 'Santa Fe, New Mexico', date: 'February 2026', stars: 5, text: 'Fantastic location and an excellent property overall. The shuttle service to and from the ski hill was efficient and seamless, making access effortless. Stephanie was highly responsive and provided clear, thorough information about every aspect of the stay. I would gladly choose to stay here again.' },
+  { name: 'Courtney', location: 'Airbnb guest', date: 'March 2026', stars: 5, text: 'The house was great! Clean, great view, very spacious which was great so the kids could play downstairs while the adults were upstairs. So close to Purgatory. We would definitely recommend this place.' },
 ];
 
 /* ────────────────── copy‑to‑clipboard ────────────────── */
@@ -879,7 +882,12 @@ export default function BookingClient() {
 
             {/* ── Guest Reviews ── */}
             <section>
-              <h2 className="font-display text-display-md text-snow mb-6">Guest Reviews</h2>
+              <h2 className="font-display text-display-md text-snow mb-2">Guest Reviews</h2>
+              <p className="font-sans text-sm text-white/50 mb-6">
+                <Star size={14} className="inline text-stone fill-stone -mt-0.5" /> {AIRBNB_RATING.score} from {AIRBNB_RATING.count} reviews on{' '}
+                <a href="https://www.airbnb.com/rooms/1205985906587842742" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-stone-light">Airbnb</a>
+                {' '}&middot; Guest Favorite &middot; Superhost
+              </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {REVIEWS.map((r) => (
                   <div key={r.name} className="bg-charcoal-light rounded-2xl p-6 border border-white/5">
@@ -891,7 +899,7 @@ export default function BookingClient() {
                     <p className="font-sans text-sm text-white/70 leading-relaxed mb-4">&ldquo;{r.text}&rdquo;</p>
                     <div className="font-sans">
                       <p className="text-sm text-snow font-medium">{r.name}</p>
-                      <p className="text-xs text-white/40">{r.location} &middot; {r.date}</p>
+                      <p className="text-xs text-white/40">{r.location} &middot; {r.date} &middot; via Airbnb</p>
                     </div>
                   </div>
                 ))}
