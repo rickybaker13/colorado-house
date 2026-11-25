@@ -333,7 +333,7 @@ export function createRentalServer(request?: Request): McpServer {
         deposit_due_after_approval: Math.round(finalTotal * 50) / 100,
         what_happens_next:
           `The owner reviews the request, usually within a day, and emails ${a.guest_email} to confirm and collect the 50% deposit. ` +
-          'The dates are held while the request is pending. Nothing has been charged.',
+          'The remaining 50% is due 30 days before check-in. The dates are held while the request is pending. Nothing has been charged.',
       };
     }),
   );
