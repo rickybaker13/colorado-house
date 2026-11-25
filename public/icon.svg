@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Purgatory Townhouse</title>
+  <rect width="256" height="256" rx="56" fill="#1a1a2e"/>
+  <!-- back peak -->
+  <path d="M34 196 L106 92 L142 140 L162 116 L222 196 Z" fill="#2d2d3f"/>
+  <!-- main peak with snowcap -->
+  <path d="M24 196 L112 66 L200 196 Z" fill="#c4956a"/>
+  <path d="M112 66 L136 101 L124 96 L112 108 L100 96 L88 101 Z" fill="#fafaf8"/>
+  <!-- townhouse at the base -->
+  <path d="M150 196 V158 L176 136 L202 158 V196 Z" fill="#fafaf8"/>
+  <rect x="168" y="172" width="16" height="24" fill="#1a1a2e"/>
+  <rect x="160" y="160" width="10" height="9" fill="#d4a574"/>
+  <rect x="182" y="160" width="10" height="9" fill="#d4a574"/>
+  <!-- ground -->
+  <rect x="24" y="196" width="208" height="8" rx="4" fill="#4a7c59"/>
+</svg>
