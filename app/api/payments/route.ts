@@ -1,5 +1,7 @@
 import { SquareClient, SquareEnvironment } from "square";
 import { randomUUID } from "crypto";
+import { checkStay } from "@/lib/agent/availability";
+import { ISO_DATE } from "@/lib/agent/dates";
 
 const squareClient = new SquareClient({
   token: process.env.SQUARE_ACCESS_TOKEN || "",
@@ -33,6 +35,25 @@ export async function POST(request: Request) {
       return Response.json(
         { error: "Invalid payment amount." },
         { status: 400 }
+      );
+    }
+
+    // Never charge a card for dates that are taken. Checked against a fresh
+    // read of Airbnb, direct bookings, and manual blocks.
+    if (!ISO_DATE.test(body.checkIn || "") || !ISO_DATE.test(body.checkOut || "")) {
+      return Response.json({ error: "Missing or invalid dates." }, { status: 400 });
+    }
+    const availability = await checkStay(body.checkIn, body.checkOut);
+    if (availability.conflicts.length) {
+      return Response.json(
+        { error: "These dates are no longer available. Your card was not charged. Please select different dates." },
+        { status: 409 }
+      );
+    }
+    if (!availability.airbnbChecked) {
+      return Response.json(
+        { error: "We couldn't confirm availability just now. Your card was not charged. Please try again in a few minutes." },
+        { status: 503 }
       );
     }
 
