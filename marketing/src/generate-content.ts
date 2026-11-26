@@ -14,7 +14,7 @@
 // ============================================================
 
 import Anthropic from "@anthropic-ai/sdk";
-import { BRAND_VOICE, HASHTAGS, PROPERTY, TARGET_MARKETS } from "./config.js";
+import { HASHTAGS, PROPERTY } from "./config.js";
 import { downloadPhoto, previewForModel, type PhotoRow } from "./photos.js";
 import { getActiveInstructions, deactivateInstruction, supabase } from "./supabase.js";
 import { sendDraftForApproval } from "./telegram.js";
@@ -34,12 +34,21 @@ export function seasonFor(date: Date): Season {
   return "fall";
 }
 
+// Posts lead with the area's most striking scenery: big mountain views,
+// alpine lakes, alpenglow, wildflower basins. Signs, storefronts, fish
+// close-ups, pets, and the townhouse interior are left for other uses.
+const NOT_SCENIC = /\b(sign|signpost|storefront|bar & grill|trout|landing net|saint bernard|dog|bedroom|bathroom|kitchen)\b/i;
+const SCENIC_BOOST = /\b(peak|peaks|lake|lakes|alpenglow|basin|ridge|panorama|summit|sunset|sunrise|waterfall|valley|golden hour|reflection)\b/i;
+
+export function isScenic(p: PhotoRow): boolean {
+  return p.setting === "area" && (p.quality ?? 0) >= 8 && !NOT_SCENIC.test(`${p.subject ?? ""} ${p.description ?? ""}`);
+}
+
 /**
- * Chooses a photo. Photos used in the last 60 days are skipped. In-season
- * photos (current or next season, or season-neutral) are preferred; if there
+ * Chooses a photo. Photos used in the last 60 days are skipped. Only the
+ * best scenic shots are eligible (see isScenic); if none are left, the best
+ * remaining area photos are used. In-season photos are preferred; if there
  * are none, any season is allowed and the caption frames it as a look ahead.
- * Among candidates, higher quality and never-used photos are favored, with
- * some randomness for variety.
  */
 export function choosePhoto(photos: PhotoRow[], now: Date, rand = Math.random): PhotoRow | null {
   const season = seasonFor(now);
@@ -48,13 +57,21 @@ export function choosePhoto(photos: PhotoRow[], now: Date, rand = Math.random): 
   const fresh = photos.filter(
     (p) => p.status === "ready" && (!p.last_used_at || Date.parse(p.last_used_at) < cutoff),
   );
-  const inSeason = fresh.filter((p) => p.season === season || p.season === next || p.season === "any");
-  const candidates = inSeason.length ? inSeason : fresh;
+  const scenic = fresh.filter(isScenic);
+  const pool = scenic.length ? scenic : fresh.filter((p) => p.setting === "area" && !NOT_SCENIC.test(p.subject ?? ""));
+  const base = pool.length ? pool : fresh;
+  const inSeason = base.filter((p) => p.season === season || p.season === next || p.season === "any");
+  const candidates = inSeason.length ? inSeason : base;
   if (!candidates.length) return null;
   const scored = candidates
     .map((p) => ({
       p,
-      score: (p.quality ?? 5) + (p.times_used === 0 ? 2 : 0) + (p.season === season ? 1 : 0) + rand() * 4,
+      score:
+        (p.quality ?? 5) * 2 +
+        (SCENIC_BOOST.test(p.subject ?? "") ? 2 : 0) +
+        (p.times_used === 0 ? 2 : 0) +
+        (p.season === season ? 1 : 0) +
+        rand() * 3,
     }))
     .sort((a, b) => b.score - a.score);
   return scored[0].p;
@@ -68,12 +85,12 @@ const CAPTION_TOOL: Anthropic.Tool = {
     properties: {
       caption: {
         type: "string",
-        description: "The caption, 60-180 words, no hashtags. It must be about what is visible in this photo.",
+        description: "The caption: 1 to 4 short sentences (under 60 words), no hashtags, no emoji strings. About the scene in this photo, its beauty, and what there is to do nearby.",
       },
       hashtags: {
         type: "array",
         items: { type: "string" },
-        description: "5-8 hashtags including the leading #.",
+        description: "Exactly 5 hashtags including the leading #. Instagram allows no more than 5.",
       },
       theme: { type: "string", description: "One or two words naming the angle, e.g. 'trail guide', 'cozy evening'." },
     },
@@ -92,25 +109,28 @@ async function writeCaption(photo: PhotoRow, recentCaptions: string[], directive
       : `It is currently ${season}.`;
 
   const prompt = [
-    `Write an Instagram post for ${PROPERTY.name}, a ${PROPERTY.bedrooms}-bedroom vacation rental townhouse (sleeps ${PROPERTY.maxGuests}) steps from Purgatory Resort near Durango, Colorado. Book direct at skipurgatoryhouse.com (link in bio).`,
+    `Write a short Instagram caption for a photo of the mountains around ${PROPERTY.name}, a vacation rental at Purgatory Resort near Durango, Colorado. The goal is to stop people scrolling and make them want to come here.`,
     ``,
-    `THE PHOTO (attached) is the owner's own. A description from when it was catalogued: "${photo.description}"`,
-    photo.location_guess ? `Identified location: ${photo.location_guess}.` : `The exact location is not known: do not name a specific trail, lake, or peak unless it is unmistakable in the photo.`,
+    `THE PHOTO (attached) is the owner's own. Catalogue description: "${photo.description}"`,
+    photo.location_guess
+      ? `Identified location: ${photo.location_guess}.`
+      : `The exact location is not known: do not name a specific trail, lake, or peak unless it is unmistakable in the photo; "the San Juans" is always fine.`,
     isProperty
       ? `This photo shows the townhouse itself.`
-      : `This photo shows the surrounding area, not the townhouse. Do not imply guests can see this view from the house; connect it to staying nearby instead.`,
+      : `This photo shows the surrounding area, not the townhouse. Do not imply it is the view from the house.`,
     seasonNote,
-    photo.caption_angles?.length ? `Possible angles: ${photo.caption_angles.join("; ")}.` : ``,
     ``,
-    `VOICE: ${BRAND_VOICE.tone.join(" ")}`,
-    `AVOID: ${BRAND_VOICE.doNot.join(" ")}`,
-    `Audience: ${TARGET_MARKETS.demographics}; many come from ${TARGET_MARKETS.primary.join(", ")}.`,
-    `End with a light call to action such as one of: ${BRAND_VOICE.callToAction.join(" | ")}.`,
-    `Facts you may use: ${PROPERTY.highlights.join("; ")}. Do not invent prices, dates, events, or amenities.`,
-    `Hashtags: always include ${HASHTAGS.instagram.always.join(" ")}, then a few relevant ones.`,
-    directives.length ? `\nOWNER INSTRUCTIONS (follow these where they fit this photo; the caption must still be about what is in the photo):\n- ${directives.join("\n- ")}` : ``,
+    `FORMAT (strict):`,
+    `- 1 to 4 short sentences, under 60 words in total. No story, no "imagine...", no narration of a day, no first person.`,
+    `- Lead with the scene and its beauty in plain, vivid words.`,
+    `- Then, if it fits, one line on how much is within reach from here, picking what suits the photo: hiking trails, fly fishing, camping, off-roading and ATV/jeep roads like the Alpine Loop, the old mining towns of Silverton and Ouray, Durango, the narrow-gauge railroad and mining history, skiing at Purgatory.`,
+    `- An optional closing nod like "Book direct, link in bio." counts toward the 4 sentences. No other calls to action.`,
+    `- Do not invent facts: no prices, dates, events, distances, or amenities beyond what is stated here.`,
+    ``,
+    `HASHTAGS: exactly 5 (Instagram's limit). Always ${HASHTAGS.instagram.always.join(" and ")}, plus 3 that match this photo and will reach people browsing those tags, e.g. ${HASHTAGS.instagram.scenic.join(" ")}.`,
+    directives.length ? `\nOWNER INSTRUCTIONS (follow these where they fit this photo and the format above):\n- ${directives.join("\n- ")}` : ``,
     recentCaptions.length
-      ? `\nRecent captions, so you don't repeat their openings or ideas:\n${recentCaptions.map((c) => `- ${c.slice(0, 140)}`).join("\n")}`
+      ? `\nRecent captions, so you don't repeat their openings or wording:\n${recentCaptions.map((c) => `- ${c.slice(0, 140)}`).join("\n")}`
       : ``,
   ]
     .filter((l) => l !== undefined)
@@ -136,6 +156,21 @@ async function writeCaption(photo: PhotoRow, recentCaptions: string[], directive
   return block.input as { caption: string; hashtags: string[]; theme: string };
 }
 
+/** Exactly the brand's 2 fixed tags plus the model's picks, max 5, no duplicates. */
+export function finalHashtags(picked: string[]): string {
+  const norm = (h: string) => (h.trim().startsWith("#") ? h.trim() : `#${h.trim()}`).replace(/\s+/g, "");
+  const out: string[] = [];
+  for (const h of [...HASHTAGS.instagram.always, ...picked.map(norm)]) {
+    if (h.length > 1 && !out.some((o) => o.toLowerCase() === h.toLowerCase())) out.push(h);
+    if (out.length === 5) break;
+  }
+  return out.join(" ");
+}
+
+export function sentenceCount(caption: string): number {
+  return (caption.trim().match(/[^.!?]+[.!?]+(\s|$)/g) ?? [caption]).length;
+}
+
 async function main() {
   console.log("=== Instagram post generator ===");
 
@@ -156,12 +191,15 @@ async function main() {
     .limit(6);
   const instructions = await getActiveInstructions();
 
-  const post = await writeCaption(
-    photo,
-    (recent ?? []).map((r) => r.content),
-    instructions.map((i) => i.content),
-  );
-  const hashtags = post.hashtags.map((h) => (h.startsWith("#") ? h : `#${h}`)).join(" ");
+  const recentCaptions = (recent ?? []).map((r) => r.content);
+  const directives = instructions.map((i) => i.content);
+  let post = await writeCaption(photo, recentCaptions, directives);
+  // One retry if the model ran long; the format is the point of the change.
+  if (sentenceCount(post.caption) > 4 || post.caption.split(/\s+/).length > 70) {
+    console.log("Caption too long, asking again.");
+    post = await writeCaption(photo, recentCaptions, [...directives, "Your last caption was too long. 1 to 4 short sentences, under 60 words."]);
+  }
+  const hashtags = finalHashtags(post.hashtags);
 
   const { data: draft, error: insErr } = await supabase
     .from("social_posts")

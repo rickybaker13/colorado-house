@@ -131,7 +131,10 @@ export const CONTENT_THEMES = {
 export const HASHTAGS = {
   // Platform-specific hashtag strategies
   instagram: {
-    always: ["#PurgatoryTownhouse", "#Durango", "#PurgatoryResort"],
+    // Instagram allows at most 5 hashtags per post (since Dec 2025). Posts use
+    // exactly 5, chosen for reach beyond existing followers: these 2, plus 3
+    // that fit the photo (from the lists below or similar).
+    always: ["#SanJuanMountains", "#DurangoColorado"],
     broad: [
       "#ColoradoVacation", "#MountainGetaway", "#SkiTrip",
       "#FamilyVacation", "#MountainLife", "#CabinLife",
@@ -144,8 +147,12 @@ export const HASHTAGS = {
       "#EscapeTheHeat", "#TexasToColorado", "#MountainCabin",
       "#BookDirect", "#VacationRental", "#SKiColorado",
     ],
-    // Use 15-20 per post, mix from each category
-    perPost: 18,
+    scenic: [
+      "#ColoradoMountains", "#AlpineLake", "#ColoradoHiking", "#Alpenglow",
+      "#Wildflowers", "#ColoradoFishing", "#Overlanding", "#Silverton",
+      "#Ouray", "#ColoradoCamping", "#FourteenersColorado", "#ExploreColorado",
+    ],
+    perPost: 5,
   },
   pinterest: {
     // Pinterest uses keyword-rich descriptions, not # hashtags
