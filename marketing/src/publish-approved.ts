@@ -131,16 +131,17 @@ async function publishPost(post: SocialPost): Promise<string> {
     // Get the image as a file (Upload-Post requires binary upload). Photo-library
     // posts come from the private bucket; older posts from a URL.
     console.log(`  Downloading image...`);
-    const { blob, filename } = post.photo_id
-      ? await photoFromLibrary(post.photo_id)
-      : await downloadImage(imageUrl);
-    console.log(`  Downloaded ${(blob.size / 1024).toFixed(0)} KB`);
+    const libraryIds = post.photo_ids?.length ? post.photo_ids : post.photo_id ? [post.photo_id] : [];
+    const images = libraryIds.length
+      ? await Promise.all(libraryIds.slice(0, 10).map((id) => photoFromLibrary(id)))
+      : [await downloadImage(imageUrl)];
+    console.log(`  Downloaded ${images.length} image(s), ${(images.reduce((s, i) => s + i.blob.size, 0) / 1024).toFixed(0)} KB`);
 
-    // Build multipart form data
+    // Build multipart form data. Several photos[] = an Instagram carousel, in this order.
     const formData = new FormData();
     formData.append("user", UPLOAD_POST_PROFILE);
     formData.append("platform[]", platform);
-    formData.append("photos[]", blob, filename);
+    images.forEach(({ blob, filename }, i) => formData.append("photos[]", blob, images.length > 1 ? `slide-${i + 1}.jpg` : filename));
 
     if (post.platform === "pinterest") {
       // Pinterest has a 100-char title limit — use short title + full description
@@ -202,7 +203,7 @@ async function main() {
     try {
       const postId = await publishPost(post);
       await markPublished(post.id!, postId);
-      if (post.photo_id) await recordPhotoUse(post.photo_id);
+      for (const id of post.photo_ids?.length ? post.photo_ids : post.photo_id ? [post.photo_id] : []) await recordPhotoUse(id);
       published++;
     } catch {
       console.error(`Failed to publish post ${post.id} to ${post.platform}`);
