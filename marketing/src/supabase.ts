@@ -29,6 +29,8 @@ export interface SocialPost {
   ayrshare_post_id?: string;
   created_at?: string;
   photo_id?: string | null;
+  /** Every photo in the post, lead first. More than one = Instagram carousel. */
+  photo_ids?: string[] | null;
 }
 
 export async function insertPost(post: Omit<SocialPost, "id" | "created_at">) {
@@ -110,7 +112,7 @@ export interface BlogPost {
 export interface AgentInstruction {
   id: string;
   content: string;
-  type: "directive" | "one-time";
+  type: "directive" | "one-time" | "announcement";
   is_active: boolean;
   expires_at: string | null;
   created_at: string;

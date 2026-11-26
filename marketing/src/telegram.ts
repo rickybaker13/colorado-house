@@ -19,13 +19,26 @@ async function call(method: string, body: FormData | Record<string, unknown>) {
  * Sends the photo, then the full caption with Post / Skip buttons.
  * Returns the message id of the caption message (the one with buttons).
  */
-export async function sendDraftForApproval(postId: string, photo: Buffer, caption: string, note: string) {
+export async function sendDraftForApproval(postId: string, photos: Buffer | Buffer[], caption: string, note: string) {
   if (!TOKEN || !CHAT_ID) throw new Error("Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID");
+  const list = Array.isArray(photos) ? photos : [photos];
   const form = new FormData();
   form.append("chat_id", CHAT_ID);
-  form.append("photo", new Blob([new Uint8Array(photo)], { type: "image/jpeg" }), "photo.jpg");
-  form.append("caption", "📸 Instagram draft");
-  await call("sendPhoto", form);
+  if (list.length === 1) {
+    form.append("photo", new Blob([new Uint8Array(list[0])], { type: "image/jpeg" }), "photo.jpg");
+    form.append("caption", "📸 Instagram draft");
+    await call("sendPhoto", form);
+  } else {
+    // Carousel: show every slide, in order, as one album.
+    const media = list.map((_, i) => ({
+      type: "photo",
+      media: `attach://p${i}`,
+      ...(i === 0 ? { caption: `📸 Instagram carousel draft (${list.length} photos, swipe order)` } : {}),
+    }));
+    form.append("media", JSON.stringify(media));
+    list.forEach((buf, i) => form.append(`p${i}`, new Blob([new Uint8Array(buf)], { type: "image/jpeg" }), `p${i}.jpg`));
+    await call("sendMediaGroup", form);
+  }
 
   const msg = await call("sendMessage", {
     chat_id: CHAT_ID,

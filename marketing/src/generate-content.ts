@@ -77,6 +77,34 @@ export function choosePhoto(photos: PhotoRow[], now: Date, rand = Math.random): 
   return scored[0].p;
 }
 
+/**
+ * Up to 3 companion photos (a 4-slide carousel): other fresh scenic shots from the
+ * same place (same identified location) or the same outing (taken within
+ * 36 hours of the lead). Fewer than 2 matches means a single-photo post.
+ */
+export function chooseCompanions(lead: PhotoRow, photos: PhotoRow[], now: Date, max = 3): PhotoRow[] {
+  const cutoff = now.getTime() - 60 * 86_400_000;
+  const place = (p: PhotoRow) => (p.location_guess ?? "").split(/[,(]/)[0].trim().toLowerCase();
+  const leadPlace = place(lead);
+  const leadTime = lead.taken_at ? Date.parse(lead.taken_at) : NaN;
+  const matches = photos.filter((p) => {
+    if (p.id === lead.id || !isScenic(p)) return false;
+    if (p.last_used_at && Date.parse(p.last_used_at) >= cutoff) return false;
+    const samePlace = leadPlace !== "" && place(p) === leadPlace;
+    const sameOuting = !Number.isNaN(leadTime) && p.taken_at && Math.abs(Date.parse(p.taken_at) - leadTime) < 36 * 3_600_000;
+    return samePlace || sameOuting;
+  });
+  if (matches.length < 2) return [];
+  // Best first, and avoid near-duplicates (same subject wording).
+  const picked: PhotoRow[] = [];
+  for (const p of matches.sort((a, b) => (b.quality ?? 0) - (a.quality ?? 0) || a.times_used - b.times_used)) {
+    if (picked.some((q) => q.subject === p.subject) || p.subject === lead.subject) continue;
+    picked.push(p);
+    if (picked.length === max) break;
+  }
+  return picked.length >= 2 ? picked : [];
+}
+
 const CAPTION_TOOL: Anthropic.Tool = {
   name: "write_post",
   description: "Write one Instagram post about the attached photo.",
@@ -98,7 +126,12 @@ const CAPTION_TOOL: Anthropic.Tool = {
   },
 };
 
-async function writeCaption(photo: PhotoRow, recentCaptions: string[], directives: string[]) {
+async function writeCaption(
+  photo: PhotoRow,
+  recentCaptions: string[],
+  directives: string[],
+  opts: { slides?: number; announcement?: string } = {},
+) {
   const now = new Date();
   const season = seasonFor(now);
   const b64 = await previewForModel(await downloadPhoto(photo.storage_path));
@@ -120,11 +153,18 @@ async function writeCaption(photo: PhotoRow, recentCaptions: string[], directive
       : `This photo shows the surrounding area, not the townhouse. Do not imply it is the view from the house.`,
     seasonNote,
     ``,
+    opts.slides && opts.slides > 1
+      ? `This is a ${opts.slides}-photo carousel; the attached photo is the first slide and the others are from the same area. Keep the caption about the place, not one single frame.`
+      : ``,
+    opts.announcement
+      ? `\nTHIS POST IS AN ANNOUNCEMENT. Open with it in plain, accurate words, then tie it to the scenery in one short line. What to announce: ${opts.announcement}\nThe closing line may point to the link in bio. No hype words ("revolutionary", "game-changing") and nothing beyond the facts given.\n`
+      : ``,
     `FORMAT (strict):`,
     `- 1 to 4 short sentences, under 60 words in total. No story, no "imagine...", no narration of a day, no first person.`,
     `- Lead with the scene and its beauty in plain, vivid words.`,
     `- Then, if it fits, one line on how much is within reach from here, picking what suits the photo: hiking trails, fly fishing, camping, off-roading and ATV/jeep roads like the Alpine Loop, the old mining towns of Silverton and Ouray, Durango, the narrow-gauge railroad and mining history, skiing at Purgatory.`,
-    `- An optional closing nod like "Book direct, link in bio." counts toward the 4 sentences. No other calls to action.`,
+    `- Name the place once in words people search for, e.g. "San Juan Mountains, Colorado" or "near Durango", worked into a sentence (Instagram search reads captions, not just hashtags).`,
+    `- Optional closing line, one only, counted in the 4 sentences: a nudge to save or share (e.g. "Save this for your summer trip." or "Send this to whoever you'd bring.") or "Book direct, link in bio." Saves and shares are what put posts in front of new people.`,
     `- Do not invent facts: no prices, dates, events, distances, or amenities beyond what is stated here.`,
     ``,
     `HASHTAGS: exactly 5 (Instagram's limit). Always ${HASHTAGS.instagram.always.join(" and ")}, plus 3 that match this photo and will reach people browsing those tags, e.g. ${HASHTAGS.instagram.scenic.join(" ")}.`,
@@ -189,15 +229,23 @@ async function main() {
     .eq("platform", "instagram")
     .order("created_at", { ascending: false })
     .limit(6);
-  const instructions = await getActiveInstructions();
+  const allInstructions = await getActiveInstructions();
+  // An announcement is used for exactly one post, oldest first.
+  const announcement = allInstructions.find((i) => i.type === "announcement");
+  const instructions = allInstructions.filter((i) => i.type !== "announcement");
+  const companions = chooseCompanions(photo, (photos ?? []) as PhotoRow[], new Date());
+  const slides = [photo, ...companions];
+  if (companions.length) console.log(`Carousel: ${slides.length} photos (${slides.map((p) => p.subject).join(" | ")})`);
+  if (announcement) console.log(`Announcement post: ${announcement.content.slice(0, 80)}`);
 
   const recentCaptions = (recent ?? []).map((r) => r.content);
   const directives = instructions.map((i) => i.content);
-  let post = await writeCaption(photo, recentCaptions, directives);
+  const opts = { slides: slides.length, announcement: announcement?.content };
+  let post = await writeCaption(photo, recentCaptions, directives, opts);
   // One retry if the model ran long; the format is the point of the change.
   if (sentenceCount(post.caption) > 4 || post.caption.split(/\s+/).length > 70) {
     console.log("Caption too long, asking again.");
-    post = await writeCaption(photo, recentCaptions, [...directives, "Your last caption was too long. 1 to 4 short sentences, under 60 words."]);
+    post = await writeCaption(photo, recentCaptions, [...directives, "Your last caption was too long. 1 to 4 short sentences, under 60 words."], opts);
   }
   const hashtags = finalHashtags(post.hashtags);
 
@@ -211,22 +259,24 @@ async function main() {
       content_theme: post.theme,
       status: "draft",
       photo_id: photo.id,
+      photo_ids: slides.map((p) => p.id),
     })
     .select("id")
     .single();
   if (insErr || !draft) throw new Error(`Saving draft failed: ${insErr?.message}`);
 
   // Reserve the photo so the next run picks a different one even if this is skipped.
-  await supabase.from("photo_library").update({ last_used_at: new Date().toISOString() }).eq("id", photo.id);
+  await supabase.from("photo_library").update({ last_used_at: new Date().toISOString() }).in("id", slides.map((p) => p.id));
 
   // One-time owner instructions are used up once applied.
   for (const i of instructions) if (i.type === "one-time") await deactivateInstruction(i.id);
+  if (announcement) await deactivateInstruction(announcement.id);
 
   const messageId = await sendDraftForApproval(
     draft.id,
-    await downloadPhoto(photo.storage_path),
+    await Promise.all(slides.map((p) => downloadPhoto(p.storage_path))),
     `${post.caption}\n\n${hashtags}`,
-    `Theme: ${post.theme}`,
+    `Theme: ${post.theme}${announcement ? " (announcement)" : ""}${slides.length > 1 ? `, ${slides.length}-photo carousel` : ""}`,
   );
   await supabase.from("social_posts").update({ telegram_message_id: messageId }).eq("id", draft.id);
 
