@@ -56,5 +56,17 @@ export function validateStay(checkIn: string, checkOut: string, minNights: numbe
     return `Minimum stay is ${minNights} nights; ${checkIn} to ${checkOut} is ${nights}. Try check_out ${addDays(checkIn, minNights)} or later.`;
   }
   if (nights > 90) return 'Stays longer than 90 nights must be arranged with the owner directly.';
+  if (addDays(checkOut, -1) > lastBookableNight()) {
+    return `The calendar is open through ${lastBookableNight()}, matching Airbnb. Choose dates on or before then.`;
+  }
   return null;
+}
+
+/**
+ * Last night that can be booked: one year out, the furthest Airbnb ever
+ * opens a calendar and the end of its calendar feed. Nights Airbnb itself
+ * has closed inside that year arrive as blocks in the feed.
+ */
+export function lastBookableNight(): string {
+  return addDays(todayAtProperty(), 365);
 }

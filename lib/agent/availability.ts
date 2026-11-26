@@ -1,5 +1,5 @@
 import { getServiceClient } from '@/lib/supabase';
-import { addDays, stayNights } from './dates';
+import { addDays, lastBookableNight, stayNights } from './dates';
 
 // Booking statuses that hold the dates (same set the website uses).
 export const HOLDING_STATUSES = ['confirmed', 'requested', 'pending_approval'];
@@ -70,6 +70,9 @@ export async function getBlockedNights(opts: { fresh?: boolean } = {}): Promise<
   for (const b of bookings) stayNights(b.check_in, b.check_out).forEach((d) => nights.add(d));
   // Manual blocks are inclusive of end_date
   for (const m of manual) stayNights(m.start_date, addDays(m.end_date, 1)).forEach((d) => nights.add(d));
+
+  // Past the booking horizon nothing is open (Airbnb's feed ends there too).
+  stayNights(addDays(lastBookableNight(), 1), addDays(lastBookableNight(), 400)).forEach((d) => nights.add(d));
 
   return { nights, airbnbSynced: airbnb !== null };
 }

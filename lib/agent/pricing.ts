@@ -46,8 +46,11 @@ export async function getRentalConfig(): Promise<RentalConfig> {
 // Bitcoin is offered only once a real receiving address is configured.
 export { bitcoinEnabled };
 
-// Airbnb guest service fee the booking page compares against.
-const AIRBNB_SERVICE_FEE_RATE = 0.14;
+// Direct nightly rates are set 15% below Airbnb's (Airbnb charges the host a
+// 15% fee and shows guests the full price), so Airbnb's price for the same
+// night is the direct rate / 0.85. Cleaning and pet fees are the same.
+export const DIRECT_DISCOUNT = 0.15;
+export const airbnbNightlyTotal = (directNightlyTotal: number) => Math.round(directNightlyTotal / (1 - DIRECT_DISCOUNT));
 
 export interface Quote {
   check_in: string;
@@ -106,10 +109,10 @@ export function buildQuote(
     pet_fee: petFee,
     subtotal,
     fees_note:
-      'Subtotal is what the direct-booking website charges, with no booking or service fee. Lodging taxes are not itemized; the owner confirms the final amount when approving the request.',
+      'Subtotal is what the direct-booking website charges: nightly rates 15% below the same nights on Airbnb, the same cleaning fee, and no booking or service fee. Lodging taxes are not itemized; the owner confirms the final amount when approving the request.',
     deposit_due_at_booking: deposit,
     balance_due_before_arrival: Math.round((subtotal - deposit) * 100) / 100,
-    estimated_airbnb_total_for_comparison: Math.round(subtotal * (1 + AIRBNB_SERVICE_FEE_RATE)),
+    estimated_airbnb_total_for_comparison: airbnbNightlyTotal(nightlyTotal) + cfg.cleaningFee + petFee,
   };
   if (bitcoinEnabled()) {
     const discount = Math.round(subtotal * (cfg.btcDiscountPercent / 100));

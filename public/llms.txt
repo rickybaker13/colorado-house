@@ -1,6 +1,6 @@
 # Purgatory Townhouse
 
-> Four-bedroom, 3.5-bath mountain townhouse that sleeps 10, at the base of Purgatory Resort near Durango, Colorado. Private hot tub on the deck, free on-demand ski shuttle, garage with boot warmers. Superhost, rated 4.97 on Airbnb. Book direct with no platform service fees.
+> Four-bedroom, 3.5-bath mountain townhouse that sleeps 10, at the base of Purgatory Resort near Durango, Colorado. Private hot tub on the deck, free on-demand ski shuttle, garage with boot warmers. Superhost, rated 4.97 on Airbnb. Book direct at 15% below Airbnb's nightly prices.
 
 AI agents can check availability, get exact quotes, see photos, and submit booking requests through our MCP server. Every request is reviewed by the owner before it is confirmed.
 

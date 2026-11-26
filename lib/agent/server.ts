@@ -58,7 +58,7 @@ export function createRentalServer(request?: Request): McpServer {
       instructions:
         'Direct booking for Purgatory Townhouse, a 4-bedroom, 10-guest ski-in/ski-out townhouse at Purgatory Resort near Durango, Colorado. ' +
         'Typical flow: townhouse_check_availability or townhouse_get_calendar, then townhouse_get_quote, then townhouse_request_booking once the traveler approves. ' +
-        'Requests are reviewed by the owner before confirmation. Booking direct avoids platform service fees.',
+        'Requests are reviewed by the owner before confirmation. Booking direct is 15% below Airbnb nightly prices.',
     },
   );
 

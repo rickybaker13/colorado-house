@@ -94,7 +94,8 @@ function rateForDate(
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
-const AIRBNB_SERVICE_FEE_RATE = 0.14;
+// Direct nightly rates are 15% below Airbnb's; cleaning and pet fees match.
+const DIRECT_DISCOUNT = 0.15;
 
 // Real guest reviews from the Airbnb listing (airbnb.com/rooms/1205985906587842742),
 // lightly trimmed. Overall: 4.97 from 32 reviews, Guest Favorite. Update from Airbnb.
@@ -279,7 +280,7 @@ export default function BookingClient() {
   const cleaningFee = cfg.cleaningFee;
   const petFee = pets > 0 ? cfg.petFee : 0;
   const subtotal = nightlyTotal + cleaningFee + petFee;
-  const airbnbTotal = Math.round(subtotal * (1 + AIRBNB_SERVICE_FEE_RATE));
+  const airbnbTotal = Math.round(nightlyTotal / (1 - DIRECT_DISCOUNT)) + cleaningFee + petFee;
   const directSavings = airbnbTotal - subtotal;
   const btcDiscount = Math.round(subtotal * (cfg.btcDiscountPercent / 100));
   const btcTotal = subtotal - btcDiscount;
@@ -534,7 +535,7 @@ export default function BookingClient() {
       <div className="border-y border-white/5" style={{ background: 'rgba(196,149,106,0.06)' }}>
         <div className="max-w-5xl mx-auto px-4 py-5 flex flex-wrap justify-center gap-x-8 gap-y-3">
           {[
-            'No Airbnb service fees',
+            '15% below Airbnb prices',
             btcEnabled ? `Save ${cfg.btcDiscountPercent}% with Bitcoin` : null,
             'Direct owner communication',
             'Flexible payment options',
@@ -726,7 +727,7 @@ export default function BookingClient() {
                       {/* Airbnb comparison */}
                       <div className="bg-white/5 rounded-xl p-4 space-y-2 mt-2">
                         <div className="flex justify-between">
-                          <span className="text-white/40 text-xs">Airbnb total <span className="text-white/20">(+14% fee)</span></span>
+                          <span className="text-white/40 text-xs">Same dates on Airbnb</span>
                           <span className="text-white/40 line-through text-xs">${airbnbTotal.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between">
@@ -911,7 +912,7 @@ export default function BookingClient() {
               <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
                 <div>
                   <h3 className="font-display text-xl text-snow mb-1">Prefer to book on Airbnb?</h3>
-                  <p className="font-sans text-sm text-white/40">Same property, same host &mdash; Airbnb service fees apply (~14%)</p>
+                  <p className="font-sans text-sm text-white/40">Same property, same host &mdash; nightly prices are 15% higher on Airbnb</p>
                 </div>
                 <a
                   href="https://www.airbnb.com/rooms/1205985906587842742"
@@ -927,7 +928,7 @@ export default function BookingClient() {
 
             {/* ── Footer ── */}
             <div className="text-center pt-8 border-t border-white/5">
-              <p className="font-sans text-xs text-white/25">Book direct for the best rate &mdash; no service fees</p>
+              <p className="font-sans text-xs text-white/25">Book direct for the best rate &mdash; 15% below Airbnb</p>
             </div>
           </div>
         </form>
