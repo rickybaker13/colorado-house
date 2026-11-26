@@ -1,19 +1,31 @@
 import type { Metadata } from 'next';
-import { Cormorant_Garamond, DM_Sans } from 'next/font/google';
+import localFont from 'next/font/local';
 import Script from 'next/script';
 import LayoutWrapper from '@/components/layout/LayoutWrapper';
 import './globals.css';
 
-const cormorant = Cormorant_Garamond({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
+// Fonts are bundled with the site (app/fonts, SIL Open Font License) rather
+// than fetched from Google Fonts at build time, which intermittently failed
+// Vercel builds. Same families, weights, and CSS variables as before.
+const cormorant = localFont({
+  src: [
+    { path: './fonts/cormorant-garamond-latin-300-normal.woff2', weight: '300', style: 'normal' },
+    { path: './fonts/cormorant-garamond-latin-400-normal.woff2', weight: '400', style: 'normal' },
+    { path: './fonts/cormorant-garamond-latin-500-normal.woff2', weight: '500', style: 'normal' },
+    { path: './fonts/cormorant-garamond-latin-600-normal.woff2', weight: '600', style: 'normal' },
+    { path: './fonts/cormorant-garamond-latin-700-normal.woff2', weight: '700', style: 'normal' },
+  ],
   variable: '--font-display',
   display: 'swap',
 });
 
-const dmSans = DM_Sans({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600'],
+const dmSans = localFont({
+  src: [
+    { path: './fonts/dm-sans-latin-300-normal.woff2', weight: '300', style: 'normal' },
+    { path: './fonts/dm-sans-latin-400-normal.woff2', weight: '400', style: 'normal' },
+    { path: './fonts/dm-sans-latin-500-normal.woff2', weight: '500', style: 'normal' },
+    { path: './fonts/dm-sans-latin-600-normal.woff2', weight: '600', style: 'normal' },
+  ],
   variable: '--font-sans',
   display: 'swap',
 });
