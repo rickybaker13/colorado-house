@@ -44,7 +44,7 @@ export const PROPERTY = {
     winter: {
       months: "November–March",
       selling_points: [
-        "Ski-in proximity to Purgatory Resort",
+        "Across from Purgatory Resort, with a free door-to-door ski shuttle all day (summoned in the Purgatory app); never call it ski-in/ski-out",
         "Kids 12 and under ski free",
         "Snowshoeing, cross-country skiing",
         "Cozy fireplace after a day on the slopes",

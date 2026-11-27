@@ -135,7 +135,7 @@ export default function PropertyClient() {
       title: 'Location Features',
       items: [
         'Lake access',
-        'Ski-in/ski-out — on free shuttle route',
+        'Free on-demand ski shuttle to the lifts (all day, via the Purgatory app)',
         'Private entrance',
         'Resort access',
       ],
