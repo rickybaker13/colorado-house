@@ -11,6 +11,8 @@ export interface PricedStay {
   /** 50% of the final total, in dollars (cents precision). */
   deposit: number;
   depositCents: bigint;
+  /** Refundable damage deposit (not part of finalTotal). */
+  damageDeposit: number;
 }
 
 export class StayError extends Error {}
@@ -35,5 +37,5 @@ export async function priceStay(input: {
   const btcDiscount = input.method === 'bitcoin' ? Math.round(quote.subtotal * (cfg.btcDiscountPercent / 100)) : 0;
   const finalTotal = quote.subtotal - btcDiscount;
   const depositCents = BigInt(Math.round(finalTotal * 50)); // 50% of dollars, in cents
-  return { quote, btcDiscount, finalTotal, deposit: Number(depositCents) / 100, depositCents };
+  return { quote, btcDiscount, finalTotal, deposit: Number(depositCents) / 100, depositCents, damageDeposit: cfg.damageDeposit };
 }

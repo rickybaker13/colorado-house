@@ -305,6 +305,8 @@ export function createRentalServer(request?: Request): McpServer {
           status: 'pending_approval',
           payment_status: 'pending',
           deposit_amount: 0,
+          damage_deposit: cfg.damageDeposit,
+          damage_status: cfg.damageDeposit > 0 ? 'due' : 'none',
         })
         .select('id')
         .single();
@@ -341,6 +343,7 @@ export function createRentalServer(request?: Request): McpServer {
         check_out: a.check_out,
         total: finalTotal,
         deposit_due_after_approval: Math.round(finalTotal * 50) / 100,
+        refundable_damage_deposit: cfg.damageDeposit,
         payment_method: a.payment_method,
         booking_page: bookingStatusUrl(booking.id),
         ...(lightningEnabled()
@@ -354,6 +357,9 @@ export function createRentalServer(request?: Request): McpServer {
           `The owner reviews the request, usually within a day, and emails ${a.guest_email}. ` +
           `Once approved, the booking page shows how to pay the 50% deposit by ${methodLabel(a.payment_method)} (or by card), and card payments confirm the booking instantly. ` +
           'The remaining 50% is due 30 days before check-in. The dates are held while the request is pending. Nothing has been charged. ' +
+          (cfg.damageDeposit > 0
+            ? `There is also a refundable $${cfg.damageDeposit} damage deposit (card hold on arrival day, or sent with the balance for other methods), returned 3 days after checkout if there is no damage. `
+            : '') +
           'Give the traveler the booking_page link; it is private to them.',
       };
     }),

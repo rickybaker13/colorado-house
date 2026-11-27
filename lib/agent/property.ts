@@ -68,7 +68,9 @@ export const PROPERTY = {
       'Up to 2 well-behaved, house-trained pets, $200 pet fee per stay (included in get_quote). All pets must be listed on the reservation; an undisclosed pet is charged $150 per night. No pets on furniture or beds. Extra cleaning or damage from pets is charged. Assistance animals are always allowed.',
     long_term_stays: 'Allowed; stays over 90 nights are arranged with the owner directly',
     booking_process:
-      'Every request is reviewed by the owner, who confirms or declines it manually. Nothing is charged until the owner approves. Then 50% of the total is due to confirm, and the remaining 50% is due 30 days before check-in.',
+      'Every request is reviewed by the owner, who confirms or declines it manually. Nothing is charged until the owner approves. Then 50% of the total is due to confirm, and the remaining 50% is due 30 days before check-in (charged automatically to the card on file for card bookings).',
+    damage_deposit:
+      'Refundable $500 damage deposit on direct bookings, not part of the total. Card bookings: a $500 hold is placed on the card the morning of arrival and released 3 days after checkout if there is no damage (stays of 5+ nights are charged and refunded instead, because card holds expire after 7 days). Other payment methods: sent with the balance and returned about 3 days after checkout. If something is damaged, the owners keep only the repair cost.',
     cancellation_policy:
       'Full refund if cancelled within 24 hours of booking. Otherwise: full refund if cancelled 30 or more days before check-in; 50% refund if cancelled 7 to 30 days before check-in; no refund if cancelled less than 7 days before check-in. Check-in date changes may be possible; ask the owner. Same terms as the booking page and the Airbnb listing.',
     house_rules: [

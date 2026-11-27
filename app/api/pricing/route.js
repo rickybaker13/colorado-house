@@ -34,6 +34,7 @@ export async function GET() {
         maxPets: config.max_pets || 2,
         minNights: config.min_nights || 3,
         btcDiscountPercent: config.btc_discount_percent || 15,
+        damageDeposit: config.damage_deposit ?? 500,
         // Labels only; addresses and handles are shown after approval.
         paymentMethods: enabledMethods(config.btc_discount_percent || 15),
         seasonalRates: pricing || [],

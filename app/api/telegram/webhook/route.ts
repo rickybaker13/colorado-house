@@ -6,6 +6,10 @@ import { sendTelegramText } from "@/lib/notify";
 import { squareClient } from "@/lib/payments/square";
 import { bookingStatusUrl } from "@/lib/payments/link";
 import { methodLabel } from "@/lib/payments/methods";
+import { markBalanceReceived, markDamageReturned, returnedKeyboard, saveCardFromPayment, settleDamage } from "@/lib/payments/stay";
+
+// Damage-deposit buttons: how much to keep.
+const DAMAGE_ACTIONS: Record<string, number | "all"> = { dmgrel: 0, dmg100: 100, dmg250: 250, dmgall: "all" };
 
 /**
  * Telegram Bot Webhook — handles inline button callbacks for booking approvals.
@@ -145,7 +149,7 @@ export async function POST(request: NextRequest) {
       return handlePostDecision(callback, action, bookingId);
     }
 
-    if (!bookingId || !["approve", "deny", "paid"].includes(action)) {
+    if (!bookingId || !["approve", "deny", "paid", "balpaid", "dmgret", ...Object.keys(DAMAGE_ACTIONS)].includes(action)) {
       await answerCallback(callback.id, "Unknown action");
       return Response.json({ ok: true });
     }
@@ -165,6 +169,47 @@ export async function POST(request: NextRequest) {
 👥 ${booking.num_guests} guests${booking.num_pets ? `, ${booking.num_pets} pets` : ""}
 💵 Total $${booking.final_total}
 💳 ${methodLabel(booking.payment_method)}`;
+
+    // ── Balance (and off-card damage deposit) received ──
+    if (action === "balpaid") {
+      if (booking.balance_status === "paid" || booking.balance_status === "charged") {
+        await answerCallback(callback.id, "Balance already recorded as paid");
+        return Response.json({ ok: true });
+      }
+      const note = await markBalanceReceived(booking);
+      await editTelegramMessage(chatId, messageId, `✅ PAID IN FULL\n\n${summary}\n${note}`);
+      await answerCallback(callback.id, "Recorded. Paid in full.");
+      return Response.json({ ok: true });
+    }
+
+    // ── Damage deposit: release or keep some ──
+    if (action in DAMAGE_ACTIONS) {
+      const choice = DAMAGE_ACTIONS[action];
+      const claim = choice === "all" ? Number(booking.damage_deposit) : choice;
+      try {
+        const note = await settleDamage(booking, claim, claim > 0 ? "Damage at the property" : "No damage reported");
+        const owed = booking.damage_status === "collected" && claim < Number(booking.damage_deposit);
+        await editTelegramMessage(
+          chatId,
+          messageId,
+          `🛡️ DAMAGE DEPOSIT SETTLED${callback.from?.first_name ? ` by ${callback.from.first_name}` : ""}\n\n${summary}\n${note}`,
+          owed ? returnedKeyboard(bookingId) : undefined
+        );
+        await answerCallback(callback.id, claim > 0 ? `Keeping $${claim}` : "Released");
+      } catch (err) {
+        console.error("Damage settle failed:", err);
+        await answerCallback(callback.id, "Couldn't update the card. Check Square.");
+        await sendTelegramText(`⚠️ Couldn't settle the damage deposit for ${booking.guest_name}: ${err instanceof Error ? err.message : err}. Check the Square dashboard.`);
+      }
+      return Response.json({ ok: true });
+    }
+
+    if (action === "dmgret") {
+      const note = await markDamageReturned(booking);
+      await editTelegramMessage(chatId, messageId, `↩️ DEPOSIT RETURNED\n\n${summary}\n${note}`);
+      await answerCallback(callback.id, "Marked as returned");
+      return Response.json({ ok: true });
+    }
 
     // ── Mark a non-card deposit as received ──
     if (action === "paid") {
@@ -210,6 +255,7 @@ export async function POST(request: NextRequest) {
           const { payment } = await squareClient.payments.complete({ paymentId: booking.square_payment_id });
           if (payment?.status !== "COMPLETED") throw new Error(`status ${payment?.status}`);
           await supabase.from("bookings").update({ status: "confirmed", payment_status: "deposit_paid" }).eq("id", bookingId);
+          await saveCardFromPayment(booking, booking.square_payment_id);
           await editTelegramMessage(chatId, messageId, `✅ APPROVED & CONFIRMED\n\n${summary}\n💳 Deposit $${booking.deposit_amount} charged. Balance due 30 days before check-in.\n\nGuest's booking page: ${statusUrl}`);
           await answerCallback(callback.id, "Approved. Deposit charged.");
         } catch (err) {
