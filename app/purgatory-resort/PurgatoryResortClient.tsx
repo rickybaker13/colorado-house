@@ -261,11 +261,12 @@ export default function PurgatoryResortClient() {
         <div className="relative z-10 h-full flex flex-col items-center justify-end text-center pb-16 md:pb-24 px-6">
           <motion.div {...fadeInUp}>
             <h2 className="font-display text-display-lg text-white mb-4 drop-shadow-lg">
-              Steps from the lifts
+              A free ride to the lifts
             </h2>
             <p className="font-sans text-body-lg text-white/80 mb-8 max-w-xl mx-auto drop-shadow-md">
-              Our townhouse sits at the base of Purgatory Resort -- ski-in
-              access and mountain views from every window.
+              Right across from the Purgatory Resort entrance. Tap the Purgatory app
+              and the free shuttle picks you up at the door, all day, and runs you
+              to the base area.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
