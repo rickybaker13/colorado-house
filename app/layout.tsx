@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import Script from 'next/script';
 import LayoutWrapper from '@/components/layout/LayoutWrapper';
+import StructuredData from '@/components/StructuredData';
+import { SITE_URL } from '@/lib/agent/property';
 import './globals.css';
 
 // Fonts are bundled with the site (app/fonts, SIL Open Font License) rather
@@ -31,6 +33,10 @@ const dmSans = localFont({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  alternates: {
+    types: { 'text/markdown': '/llms.txt' },
+  },
   title: 'Purgatory Townhouse | Mountain Living in the San Juans',
   description:
     'A luxury mountain retreat nestled in Purgatory, Colorado. Four bedrooms, breathtaking alpine views, and direct access to the San Juan Mountains.',
@@ -46,7 +52,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://colorado-house.vercel.app',
+    url: SITE_URL,
     siteName: 'Purgatory Townhouse',
     title: 'Purgatory Townhouse | Mountain Living in the San Juans',
     description:
@@ -78,6 +84,7 @@ export default function RootLayout({
       <body
         className={`${cormorant.variable} ${dmSans.variable} font-sans antialiased`}
       >
+        <StructuredData />
         <LayoutWrapper>{children}</LayoutWrapper>
       </body>
     </html>
