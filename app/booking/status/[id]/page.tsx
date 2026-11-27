@@ -5,10 +5,11 @@ import { notFound } from 'next/navigation';
 import { getServiceClient } from '@/lib/supabase';
 import { verifyBookingToken } from '@/lib/payments/link';
 import { cardEnabled, isEnabled, methodDetails, methodLabel, normalizeMethod } from '@/lib/payments/methods';
-import { addDays } from '@/lib/agent/dates';
+import { addDays, todayAtProperty } from '@/lib/agent/dates';
 import PayByCard from './PayByCard';
 import PayByLightning from './PayByLightning';
 import { btcUsd, lightningEnabled } from '@/lib/payments/lightning';
+import { autoReleaseDate, balanceFormOpen, cardDamageMethod, damageFormOpen, releaseDate } from '@/lib/payments/stay';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Your booking | Purgatory Townhouse', robots: { index: false, follow: false } };
@@ -51,6 +52,34 @@ export default async function BookingStatusPage({
   const showLightning = awaitingDeposit && method === 'bitcoin' && lightningEnabled();
   const reference = `Purgatory ${id.slice(0, 8)}`;
 
+  // Balance and damage deposit (after the booking deposit).
+  const today = todayAtProperty();
+  const balancePaid = ['charged', 'paid'].includes(b.balance_status);
+  const damage = Number(b.damage_deposit) || 0;
+  const offCard = method !== 'credit_card';
+  const balanceDueNow = b.status === 'confirmed' && b.payment_status === 'deposit_paid' && !balancePaid && today >= balanceDue;
+  const showBalanceCard = cardEnabled() && balanceFormOpen(b, today);
+  const showDamageCard = cardEnabled() && damageFormOpen(b, today) && !(offCard && b.damage_status === 'due');
+  const offCardDue = balanceDueNow && offCard ? Math.round((balance + (b.damage_status === 'due' ? damage : 0)) * 100) / 100 : 0;
+  const offCardDetails = offCardDue > 0 && method && isEnabled(method) ? methodDetails(method) : [];
+  const offCardPrice = offCardDue > 0 && method === 'bitcoin' ? await btcUsd() : null;
+  const damageText = (() => {
+    switch (b.damage_status) {
+      case 'held': return `On hold on your card (not charged). Released ${longDate(autoReleaseDate(b))} if there's no damage.`;
+      case 'charged': return `Charged; refunded ${longDate(autoReleaseDate(b))} if there's no damage.`;
+      case 'collected': return `Received; sent back about ${longDate(releaseDate(b))} if there's no damage.`;
+      case 'released': case 'return_due': return 'Returned.';
+      case 'claimed': return Number(b.damage_claimed) >= damage ? 'Kept for damage.' : `$${Number(b.damage_claimed)} kept for damage; the rest returned.`;
+      case 'failed': return 'Your card was declined for the hold. Please add it below.';
+      default:
+        return method === 'credit_card'
+          ? cardDamageMethod(b) === 'hold'
+            ? `Hold placed on your card the morning of ${longDate(b.check_in)}; released 3 days after checkout.`
+            : `Charged to your card on ${longDate(b.check_in)} and refunded 3 days after checkout (longer stays can't use a hold).`
+          : 'Send it with your balance; returned about 3 days after checkout.';
+    }
+  })();
+
   return (
     <div className="min-h-screen bg-charcoal pt-28 pb-20">
       <div className="max-w-2xl mx-auto px-4 space-y-6 font-sans">
@@ -73,7 +102,13 @@ export default async function BookingStatusPage({
               k={b.payment_status === 'deposit_paid' ? 'Deposit (paid)' : b.payment_status === 'deposit_held' ? 'Deposit (card hold, charged on approval)' : 'Deposit (50%)'}
               v={usd(Number(b.deposit_amount) || deposit)}
             />
-            <Row k={`Balance, due by ${longDate(balanceDue)}`} v={usd(balance)} />
+            <Row k={balancePaid ? 'Balance (paid)' : `Balance, due by ${longDate(balanceDue)}`} v={usd(balance)} />
+            {damage > 0 && b.damage_status !== 'none' && (
+              <div className="pt-2 border-t border-white/10 space-y-1">
+                <Row k="Refundable damage deposit" v={usd(damage)} />
+                <p className="text-xs text-white/40">{damageText}</p>
+              </div>
+            )}
           </div>
         </section>
 
@@ -116,6 +151,50 @@ export default async function BookingStatusPage({
             <h2 className="font-display text-xl text-snow">{method === 'credit_card' ? 'Pay the deposit by card' : 'Or pay by card'}</h2>
             <p className="text-white/60">Charges {usd(deposit)} now and confirms your booking right away.</p>
             <PayByCard bookingId={id} token={t!} amount={deposit} />
+          </section>
+        )}
+
+        {offCardDue > 0 && offCardDetails.length > 0 && (
+          <section className="bg-charcoal-light rounded-2xl p-6 border border-amber-400/20 space-y-4 text-sm">
+            <h2 className="font-display text-xl text-snow">Balance due{b.damage_status === 'due' && damage ? ' + damage deposit' : ''}</h2>
+            <p className="text-white/70">
+              Send <strong className="text-snow">{usd(offCardDue)}</strong>
+              {b.damage_status === 'due' && damage ? <> ({usd(balance)} balance + {usd(damage)} refundable damage deposit)</> : null}
+              {method === 'bitcoin' && offCardPrice ? <> (about <strong className="text-snow">{(offCardDue / offCardPrice).toFixed(6)} BTC</strong> at today&apos;s rate)</> : null}
+              {method === 'stablecoin' ? ' in USDC or USDT' : ''} by {methodLabel(b.payment_method)} to:
+            </p>
+            <div className="space-y-2">
+              {offCardDetails.map((d) => (
+                <div key={d.label + d.value} className="px-4 py-3 bg-white/5 rounded-lg">
+                  <p className="text-xs text-white/50">{d.label}</p>
+                  <code className="text-stone-light break-all">{d.value}</code>
+                </div>
+              ))}
+            </div>
+            <p className="text-white/50">Include <strong className="text-snow">{reference}</strong> in the note if the app allows it.</p>
+          </section>
+        )}
+
+        {showBalanceCard && (
+          <section className="bg-charcoal-light rounded-2xl p-6 border border-white/5 space-y-3 text-sm">
+            <h2 className="font-display text-xl text-snow">{offCard ? 'Or pay the balance by card' : 'Pay the balance by card'}</h2>
+            <p className="text-white/60">
+              Charges {usd(balance)} now.
+              {offCard && b.damage_status === 'due' && damage ? ` Your ${usd(damage)} damage deposit then becomes a card hold on arrival day instead.` : ''}
+            </p>
+            <PayByCard bookingId={id} token={t!} amount={balance} purpose="balance" />
+          </section>
+        )}
+
+        {showDamageCard && (
+          <section className="bg-charcoal-light rounded-2xl p-6 border border-white/5 space-y-3 text-sm">
+            <h2 className="font-display text-xl text-snow">Add your refundable damage deposit</h2>
+            <p className="text-white/60">
+              {cardDamageMethod(b) === 'hold'
+                ? `Places a ${usd(damage)} hold on your card (not a charge). It's released 3 days after checkout if there's no damage.`
+                : `Charges ${usd(damage)}, refunded 3 days after checkout if there's no damage.`}
+            </p>
+            <PayByCard bookingId={id} token={t!} amount={damage} purpose="damage" />
           </section>
         )}
 

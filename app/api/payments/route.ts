@@ -7,6 +7,10 @@
 //    hold automatically after 7 days.
 // 2. Already-approved request paying by card: { sourceId, bookingId, token }
 //    (agent bookings, or a hold that expired). Charges the 50% deposit now.
+// 3. From the booking page later: { sourceId, bookingId, token, purpose }
+//    purpose "balance" pays the remaining 50%; "damage" places the refundable
+//    damage deposit (hold, or charge for long stays).
+// Card payments save the card on file for the balance and damage hold.
 import { randomUUID } from "crypto";
 import { checkStay } from "@/lib/agent/availability";
 import { ISO_DATE } from "@/lib/agent/dates";
@@ -16,6 +20,7 @@ import { squareClient, squareErrorMessage, squareLocationId } from "@/lib/paymen
 import { verifyBookingToken } from "@/lib/payments/link";
 import { getServiceClient } from "@/lib/supabase";
 import { sendTelegramText } from "@/lib/notify";
+import { balanceFormOpen, damageFormOpen, payBalanceWithCard, payDamageWithCard, saveCardFromPayment } from "@/lib/payments/stay";
 
 interface Body {
   sourceId?: string;
@@ -27,6 +32,7 @@ interface Body {
   guestEmail?: string;
   bookingId?: string;
   token?: string;
+  purpose?: "deposit" | "balance" | "damage";
 }
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
@@ -36,6 +42,7 @@ export async function POST(request: Request) {
     const body = (await request.json()) as Body;
     if (!body.sourceId) return json({ error: "Payment token is missing. Please try again." }, 400);
     if (!cardEnabled()) return json({ error: "Card payments are not available right now. Please choose another method." }, 503);
+    if (body.bookingId && (body.purpose === "balance" || body.purpose === "damage")) return payLater(body);
     return body.bookingId ? payApprovedBooking(body) : holdNewRequest(body);
   } catch (err) {
     console.error("Square payment error:", err);
@@ -110,8 +117,28 @@ async function payApprovedBooking(body: Body) {
     .from("bookings")
     .update({ status: "confirmed", payment_status: "deposit_paid", square_payment_id: payment.id, deposit_amount: deposit, payment_method: "credit_card" })
     .eq("id", booking.id);
+  await saveCardFromPayment(booking, payment.id);
   await sendTelegramText(
     `💳 DEPOSIT PAID BY CARD\n${booking.guest_name}, ${booking.check_in} → ${booking.check_out}\n$${deposit} charged. Booking is now confirmed.\nSquare payment: ${payment.id}`
   ).catch((e) => console.error("Telegram alert failed:", e));
   return json({ success: true, paymentId: payment.id, depositAmount: deposit, confirmed: true });
+}
+
+async function payLater(body: Body) {
+  if (!verifyBookingToken(body.bookingId!, body.token)) return json({ error: "This payment link is not valid." }, 403);
+  const { data: booking } = await getServiceClient().from("bookings").select("*").eq("id", body.bookingId!).single();
+  if (!booking) return json({ error: "Booking not found." }, 404);
+  try {
+    if (body.purpose === "balance") {
+      if (!balanceFormOpen(booking)) return json({ error: "There's no balance due by card on this booking right now." }, 409);
+      const amount = await payBalanceWithCard(booking, body.sourceId!);
+      return json({ success: true, amount });
+    }
+    if (!damageFormOpen(booking)) return json({ error: "The damage deposit can't be added right now." }, 409);
+    const { amount, method } = await payDamageWithCard(booking, body.sourceId!);
+    return json({ success: true, amount, held: method === "hold" });
+  } catch (err) {
+    console.error("Booking page card payment failed:", err);
+    return json({ error: squareErrorMessage(err, "Your card was declined. Please check the details or try another card.") }, 400);
+  }
 }

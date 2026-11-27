@@ -7,6 +7,7 @@ import { isEnabled, normalizeMethod } from "@/lib/payments/methods";
 import { priceStay, StayError } from "@/lib/payments/price";
 import { squareClient } from "@/lib/payments/square";
 import { bookingStatusUrl } from "@/lib/payments/link";
+import { saveCardFromPayment } from "@/lib/payments/stay";
 
 const json = (body, status = 200) => Response.json(body, { status });
 
@@ -84,7 +85,7 @@ export async function POST(request) {
       );
     }
 
-    const { quote, btcDiscount, finalTotal, deposit } = priced;
+    const { quote, btcDiscount, finalTotal, deposit, damageDeposit } = priced;
     const supabase = getServiceClient();
     const row = {
       guest_name: String(body.guest_name).slice(0, 200),
@@ -106,6 +107,8 @@ export async function POST(request) {
       payment_status: method === "credit_card" ? "deposit_held" : "pending",
       square_payment_id: heldPaymentId,
       deposit_amount: method === "credit_card" ? deposit : 0,
+      damage_deposit: damageDeposit,
+      damage_status: damageDeposit > 0 ? "due" : "none",
     };
     const { data: booking, error } = await supabase.from("bookings").insert(row).select().single();
     if (error) {
@@ -113,7 +116,13 @@ export async function POST(request) {
       if (heldPaymentId) await releaseHold(heldPaymentId);
       return json({ error: "Failed to save booking. Nothing was charged. Please try again." }, 500);
     }
+    const savedFrom = heldPaymentId;
     heldPaymentId = null; // the booking owns the hold now
+
+    // Keep the card for the balance and damage hold (the guest agreed to this
+    // on the payment form). If Square won't save it from a hold, it's retried
+    // when the deposit is captured.
+    if (savedFrom) await saveCardFromPayment(booking, savedFrom);
 
     try {
       await sendTelegramNotification({ ...row, id: booking.id });

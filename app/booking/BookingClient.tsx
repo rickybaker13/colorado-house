@@ -36,6 +36,8 @@ interface PricingConfig {
   maxPets: number;
   minNights: number;
   btcDiscountPercent: number;
+  /** Refundable damage deposit in dollars (0 = none). */
+  damageDeposit?: number;
   seasonalRates: SeasonalRate[];
   /** Enabled methods, from the server. Payment details come after approval. */
   paymentMethods: PaymentMethod[];
@@ -213,10 +215,12 @@ export default function BookingClient() {
     maxPets: 2,
     minNights: 3,
     btcDiscountPercent: 15,
+    damageDeposit: 500,
     seasonalRates: [],
     paymentMethods: [] as PaymentMethod[],
   };
   const methods = cfg.paymentMethods ?? [];
+  const damageDeposit = cfg.damageDeposit ?? 0;
   const btcEnabled = methods.some((m) => m.id === 'bitcoin');
 
   /* ── calendar helpers ── */
@@ -627,6 +631,10 @@ export default function BookingClient() {
                           {sel && pm.id === 'credit_card' && (
                             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
                               <SquareCardForm ref={squareCardRef} disabled={submitting} />
+                              <p className="mt-2 px-1 text-[11px] leading-relaxed font-sans text-white/40">
+                                By paying by card, you authorize us to keep this card on file with Square to charge the remaining 50% balance 30 days before check-in
+                                {damageDeposit > 0 ? ` and to place a refundable $${damageDeposit} damage deposit hold on arrival day, released 3 days after checkout if there's no damage` : ''}.
+                              </p>
                             </motion.div>
                           )}
                           {sel && pm.id !== 'credit_card' && (
@@ -723,6 +731,12 @@ export default function BookingClient() {
                         <span className="text-snow font-medium">Book Direct</span>
                         <span className="text-stone text-lg font-semibold">${subtotal.toLocaleString()}</span>
                       </div>
+                      {damageDeposit > 0 && (
+                        <div className="flex justify-between text-xs">
+                          <span className="text-white/40">Refundable damage deposit (not part of the total)</span>
+                          <span className="text-white/40">${damageDeposit.toLocaleString()}</span>
+                        </div>
+                      )}
 
                       {/* Airbnb comparison */}
                       <div className="bg-white/5 rounded-xl p-4 space-y-2 mt-2">
@@ -863,6 +877,25 @@ export default function BookingClient() {
                 </div>
               </div>
             </section>
+
+            {/* ── Damage deposit ── */}
+            {damageDeposit > 0 && (
+              <section>
+                <h2 className="font-display text-display-md text-snow mb-6">Refundable Damage Deposit</h2>
+                <div className="bg-charcoal-light rounded-2xl p-6 md:p-8 border border-white/5 space-y-3 font-sans text-sm text-white/60">
+                  <p>
+                    Direct bookings carry a <span className="text-snow">${damageDeposit.toLocaleString()} refundable damage deposit</span>, separate from your total.
+                  </p>
+                  <p>
+                    <span className="text-snow">Paying by card:</span> we place a ${damageDeposit.toLocaleString()} hold on your card the morning you arrive. It isn&rsquo;t a charge, and it drops off 3 days after checkout if there&rsquo;s no damage. (For stays of 5 nights or more, card holds expire too soon, so the deposit is charged and refunded instead.)
+                  </p>
+                  <p>
+                    <span className="text-snow">Other payment methods:</span> send the deposit along with your balance, and we send it back about 3 days after checkout.
+                  </p>
+                  <p>If something is damaged, we&rsquo;ll tell you what happened and keep only what the repair costs.</p>
+                </div>
+              </section>
+            )}
 
             {/* ── House Rules ── */}
             <section>

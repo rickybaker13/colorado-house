@@ -22,6 +22,11 @@ interface Booking {
   payment_status: string
   square_payment_id: string | null
   deposit_amount: number
+  balance_status: string
+  damage_deposit: number
+  damage_status: string
+  damage_method: string | null
+  damage_claimed: number
   created_at: string
 }
 
@@ -132,6 +137,30 @@ export default function BookingsClient() {
       if (res.ok) {
         setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b))
       }
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  async function settleDamage(b: Booking) {
+    const raw = prompt(`Damage deposit for ${b.guest_name}: how many dollars to keep? (0 releases all $${b.damage_deposit})`, '0')
+    if (raw === null) return
+    const claim = Number(raw)
+    if (!Number.isFinite(claim) || claim < 0 || claim > Number(b.damage_deposit)) {
+      alert(`Enter an amount from 0 to ${b.damage_deposit}.`)
+      return
+    }
+    setActionLoading(b.id)
+    try {
+      const res = await fetch('/api/admin/bookings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: b.id, damageClaim: claim }),
+      })
+      const data = await res.json()
+      if (!res.ok) { alert(data.error || 'Failed'); return }
+      setBookings(prev => prev.map(x => x.id === b.id ? { ...x, ...data } : x))
+      alert(data.note)
     } finally {
       setActionLoading(null)
     }
@@ -289,6 +318,15 @@ export default function BookingsClient() {
                       Deposit: ${booking.deposit_amount}
                     </div>
                   )}
+                  {['charged', 'paid'].includes(booking.balance_status) && (
+                    <div style={{ color: '#4ade80' }}>Paid in full</div>
+                  )}
+                  {booking.damage_deposit > 0 && booking.damage_status !== 'none' && (
+                    <div>
+                      Damage deposit ${booking.damage_deposit}: {booking.damage_status.replace('_', ' ')}
+                      {booking.damage_claimed > 0 ? ` (kept $${booking.damage_claimed})` : ''}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -341,6 +379,15 @@ export default function BookingsClient() {
                   >
                     <XCircle size={13} />
                     Cancel
+                  </button>
+                )}
+                {['held', 'charged', 'collected'].includes(booking.damage_status) && (
+                  <button
+                    onClick={() => settleDamage(booking)}
+                    disabled={actionLoading === booking.id}
+                    style={{ ...btnBase, backgroundColor: 'rgba(196,149,106,0.15)', color: '#c4956a' }}
+                  >
+                    Settle damage deposit
                   </button>
                 )}
                 {(booking.status === 'denied' || booking.status === 'cancelled') && (

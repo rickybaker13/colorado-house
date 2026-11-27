@@ -10,6 +10,8 @@ export interface RentalConfig {
   maxPets: number;
   minNights: number;
   btcDiscountPercent: number;
+  /** Refundable damage deposit for direct bookings, in dollars (0 = none). */
+  damageDeposit: number;
   /** Newest first: when ranges overlap, the most recent edit wins. */
   seasonalRates: { start_date: string; end_date: string; nightly_rate: number }[];
 }
@@ -39,6 +41,7 @@ export async function getRentalConfig(): Promise<RentalConfig> {
     maxPets: cfg.max_pets || 2,
     minNights: cfg.min_nights || 3,
     btcDiscountPercent: cfg.btc_discount_percent || 15,
+    damageDeposit: cfg.damage_deposit ?? 500,
     seasonalRates: rates.map((r) => ({ start_date: r.start_date, end_date: r.end_date, nightly_rate: Number(r.nightly_rate) })),
   };
 }
@@ -68,6 +71,8 @@ export interface Quote {
   fees_note: string;
   deposit_due_at_booking: number;
   balance_due_before_arrival: number;
+  refundable_damage_deposit: number;
+  damage_deposit_note: string;
   bitcoin_option?: { discount_percent: number; discount: number; total: number };
   estimated_airbnb_total_for_comparison: number;
 }
@@ -112,6 +117,10 @@ export function buildQuote(
       'Subtotal is what the direct-booking website charges: nightly rates 15% below the same nights on Airbnb, the same cleaning fee, and no booking or service fee. Lodging taxes are not itemized; the owner confirms the final amount when approving the request.',
     deposit_due_at_booking: deposit,
     balance_due_before_arrival: Math.round((subtotal - deposit) * 100) / 100,
+    refundable_damage_deposit: cfg.damageDeposit,
+    damage_deposit_note: cfg.damageDeposit > 0
+      ? `Not part of the total. Card guests: a $${cfg.damageDeposit} hold is placed on the card the morning of arrival (stays of 5+ nights are charged and refunded instead) and released 3 days after checkout if there is no damage. Other payment methods: send it with the balance; it is returned after checkout.`
+      : 'No damage deposit.',
     estimated_airbnb_total_for_comparison: airbnbNightlyTotal(nightlyTotal) + cfg.cleaningFee + petFee,
   };
   if (bitcoinEnabled()) {

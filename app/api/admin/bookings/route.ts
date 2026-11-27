@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { releaseDamageOnCancel, settleDamage } from '@/lib/payments/stay'
+import { sendTelegramText } from '@/lib/notify'
 
 async function verifyAdmin() {
   const supabase = await createSupabaseServerClient()
@@ -40,7 +42,27 @@ export async function GET() {
 export async function PATCH(request: NextRequest) {
   try {
     await verifyAdmin()
-    const { id, status } = await request.json()
+    const { id, status, damageClaim } = await request.json()
+
+    // Damage deposit: keep `damageClaim` dollars (0 releases it all).
+    if (id && damageClaim !== undefined) {
+      const claim = Number(damageClaim)
+      if (!Number.isFinite(claim) || claim < 0) {
+        return NextResponse.json({ error: 'Invalid amount' }, { status: 400 })
+      }
+      const supabase = getServiceClient()
+      const { data: booking } = await supabase.from('bookings').select('*').eq('id', id).single()
+      if (!booking) return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
+      try {
+        const note = await settleDamage(booking, claim, claim > 0 ? 'Damage at the property' : 'No damage reported')
+        await sendTelegramText(`🛡️ DAMAGE DEPOSIT SETTLED (admin)\n${booking.guest_name}, ${booking.check_in} → ${booking.check_out}\n${note}`).catch(() => {})
+        const { data } = await supabase.from('bookings').select('*').eq('id', id).single()
+        return NextResponse.json({ ...data, note })
+      } catch (err) {
+        console.error('Damage settle failed:', err)
+        return NextResponse.json({ error: 'Square could not process this. Check the Square dashboard.' }, { status: 502 })
+      }
+    }
 
     if (!id || !status) {
       return NextResponse.json({ error: 'Missing id or status' }, { status: 400 })
@@ -52,6 +74,14 @@ export async function PATCH(request: NextRequest) {
     }
 
     const supabase = getServiceClient()
+    if (status === 'cancelled' || status === 'denied') {
+      // Give back any damage deposit taken for this stay.
+      const { data: before } = await supabase.from('bookings').select('*').eq('id', id).single()
+      if (before) {
+        const note = await releaseDamageOnCancel(before)
+        if (note) await sendTelegramText(`${before.guest_name}, ${before.check_in} → ${before.check_out} ${status}.${note}`).catch(() => {})
+      }
+    }
     const { data, error } = await supabase
       .from('bookings')
       .update({ status })
