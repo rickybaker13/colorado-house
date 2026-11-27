@@ -1,8 +1,32 @@
 import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import type { NextFetchEvent, NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { identifyCrawler, logCrawlerVisit } from '@/lib/crawlers'
 
-export async function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest, event: NextFetchEvent) {
+  // Record visits from known AI and search crawlers (in the background, never blocking the page).
+  const userAgent = request.headers.get('user-agent')
+  const bot = identifyCrawler(userAgent)
+  if (bot) {
+    event.waitUntil(
+      logCrawlerVisit({
+        bot,
+        path: request.nextUrl.pathname,
+        userAgent,
+        referer: request.headers.get('referer'),
+        country: request.headers.get('x-vercel-ip-country'),
+      })
+    )
+  }
+
+  if (!request.nextUrl.pathname.startsWith('/admin')) {
+    return NextResponse.next()
+  }
+
+  return adminAuth(request)
+}
+
+async function adminAuth(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -57,5 +81,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  // Everything except build assets, images, fonts and API routes
+  // (the MCP endpoint logs its own traffic).
+  matcher: ['/((?!_next/static|_next/image|images/|fonts/|api/|favicon\\.ico|icon).*)'],
 }
