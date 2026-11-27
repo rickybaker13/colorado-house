@@ -142,6 +142,43 @@ export default function BookingsClient() {
     }
   }
 
+  async function cancelBooking(b: Booking) {
+    setActionLoading(b.id)
+    try {
+      const res = await fetch(`/api/admin/bookings?refundPreview=${b.id}`)
+      const p = await res.json()
+      if (!res.ok) { alert(p.error || 'Could not load the refund'); return }
+      const how = [
+        p.byCard > 0 ? `$${p.byCard} back to their card automatically` : '',
+        p.byHand > 0 ? `$${p.byHand} for you to send back by ${p.method}` : '',
+      ].filter(Boolean).join(' and ')
+      const raw = prompt(
+        `Cancel ${b.guest_name}'s booking (${b.check_in} to ${b.check_out})?\n\n` +
+        `${p.rule}.\nPaid so far: $${p.paid}. Policy refund: $${p.policyRefund}${how ? ` (${how})` : ''}.\n` +
+        (b.damage_status && ['held', 'charged', 'collected'].includes(b.damage_status) ? 'The damage deposit is released too.\n' : '') +
+        `\nRefund amount (change it to override the policy, or Cancel to keep the booking):`,
+        String(p.policyRefund),
+      )
+      if (raw === null) return
+      const amount = Number(raw)
+      if (!Number.isFinite(amount) || amount < 0 || amount > p.paid) {
+        alert(`Enter an amount from 0 to ${p.paid}.`)
+        return
+      }
+      const done = await fetch('/api/admin/bookings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: b.id, status: 'cancelled', refundAmount: amount }),
+      })
+      const data = await done.json()
+      if (!done.ok) { alert(data.error || 'Cancel failed'); return }
+      setBookings(prev => prev.map(x => x.id === b.id ? { ...x, ...data } : x))
+      alert(`Cancelled.\n\n${data.note}`)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
   async function settleDamage(b: Booking) {
     const raw = prompt(`Damage deposit for ${b.guest_name}: how many dollars to keep? (0 releases all $${b.damage_deposit})`, '0')
     if (raw === null) return
@@ -369,7 +406,7 @@ export default function BookingsClient() {
                 )}
                 {(booking.status === 'confirmed' || booking.status === 'requested') && (
                   <button
-                    onClick={() => updateStatus(booking.id, 'cancelled')}
+                    onClick={() => cancelBooking(booking)}
                     disabled={actionLoading === booking.id}
                     style={{
                       ...btnBase,

@@ -103,6 +103,9 @@ export default async function BookingStatusPage({
               v={usd(Number(b.deposit_amount) || deposit)}
             />
             <Row k={balancePaid ? 'Balance (paid)' : `Balance, due by ${longDate(balanceDue)}`} v={usd(balance)} />
+            {b.status === 'cancelled' && Number(b.refunded_amount) > 0 && (
+              <Row k="Refunded to your card" v={usd(Number(b.refunded_amount))} />
+            )}
             {damage > 0 && b.damage_status !== 'none' && (
               <div className="pt-2 border-t border-white/10 space-y-1">
                 <Row k="Refundable damage deposit" v={usd(damage)} />

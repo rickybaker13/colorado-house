@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { releaseDamageOnCancel, settleDamage } from '@/lib/payments/stay'
+import { cancelWithRefund, previewRefund } from '@/lib/payments/cancel'
 import { sendTelegramText } from '@/lib/notify'
 
 async function verifyAdmin() {
@@ -18,10 +19,19 @@ async function verifyAdmin() {
   return user
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     await verifyAdmin()
     const supabase = getServiceClient()
+
+    // Refund preview for the Cancel button: ?refundPreview=<booking id>
+    const previewId = request.nextUrl.searchParams.get('refundPreview')
+    if (previewId) {
+      const { data: booking } = await supabase.from('bookings').select('*').eq('id', previewId).single()
+      if (!booking) return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
+      return NextResponse.json(previewRefund(booking))
+    }
+
     const { data, error } = await supabase
       .from('bookings')
       .select('*')
@@ -42,7 +52,7 @@ export async function GET() {
 export async function PATCH(request: NextRequest) {
   try {
     await verifyAdmin()
-    const { id, status, damageClaim } = await request.json()
+    const { id, status, damageClaim, refundAmount } = await request.json()
 
     // Damage deposit: keep `damageClaim` dollars (0 releases it all).
     if (id && damageClaim !== undefined) {
@@ -74,6 +84,19 @@ export async function PATCH(request: NextRequest) {
     }
 
     const supabase = getServiceClient()
+
+    // Cancel with a refund under the cancellation policy (or the amount the owner chose).
+    if (status === 'cancelled' && refundAmount !== undefined) {
+      const amount = Number(refundAmount)
+      if (!Number.isFinite(amount) || amount < 0) return NextResponse.json({ error: 'Invalid refund amount' }, { status: 400 })
+      const { data: booking } = await supabase.from('bookings').select('*').eq('id', id).single()
+      if (!booking) return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
+      if (booking.status === 'cancelled') return NextResponse.json({ error: 'Already cancelled' }, { status: 409 })
+      const note = await cancelWithRefund(booking, amount)
+      const { data } = await supabase.from('bookings').select('*').eq('id', id).single()
+      return NextResponse.json({ ...data, note })
+    }
+
     if (status === 'cancelled' || status === 'denied') {
       // Give back any damage deposit taken for this stay.
       const { data: before } = await supabase.from('bookings').select('*').eq('id', id).single()
