@@ -83,6 +83,14 @@ export default function Footer() {
             &copy; {currentYear} Purgatory Townhouse. All rights reserved.
           </p>
           <div className="flex" style={{ gap: '32px' }}>
+            <a
+              href="/llms.txt"
+              title="Book through your AI assistant: availability, quotes, and booking requests over MCP"
+              className="font-sans transition-colors duration-300"
+              style={{ fontSize: '13px', color: 'rgba(255,255,255,0.25)', fontWeight: 300 }}
+            >
+              For AI assistants
+            </a>
             {['Privacy', 'Terms'].map((item) => (
               <Link
                 key={item}
