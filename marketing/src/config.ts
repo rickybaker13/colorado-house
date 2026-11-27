@@ -8,7 +8,7 @@
 export const PROPERTY = {
   name: "Purgatory Townhouse",
   tagline: "Luxury mountain retreat at Purgatory Resort",
-  location: "108 Travertine Trl, Durango, CO 81301",
+  location: "Across from Purgatory Resort, 25 minutes north of Durango, CO (never publish the street address; guests get it after booking)",
   elevation: "8,793 feet",
   bedrooms: 4,
   bathrooms: 3.5,
